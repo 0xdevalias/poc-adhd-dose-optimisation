@@ -5,6 +5,20 @@ Proof‑of‑concept (PoC) scripts for exploring ADHD medication dosing patterns
 > [!IMPORTANT]
 > The dose impact and decay models here may not match real pharmacokinetics or perceived effects. Use as exploratory visualisations only — not medical advice.
 
+## Table of Contents
+
+<!-- TOC start (generated with https://bitdowntoc.derlin.ch/) -->
+- [What’s Included](#whats-included)
+  - [Example Output](#example-output)
+- [Notes and Limitations](#notes-and-limitations)
+  - [Toggling Dex IR Models (Perceived vs PK)](#toggling-dex-ir-models-perceived-vs-pk)
+- [Environment Setup](#environment-setup)
+  - [Option A: `pyenv` + `pyenv-virtualenv` (preferred)](#option-a-pyenv--pyenv-virtualenv-preferred)
+  - [Option B: Standard virtualenv](#option-b-standard-virtualenv)
+- [Running the Scripts](#running-the-scripts)
+- [License](#license)
+<!-- TOC end -->
+
 ## What’s Included
 
 - `graph-vyvanse-with-dex-curves.py`: Models Vyvanse with Dex IR top‑ups (the “reference” scenario) with stop‑after projections.
