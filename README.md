@@ -1,6 +1,6 @@
 # poc-adhd-dose-optimisation
 
-Proof‑of‑concept (PoC) scripts for exploring ADHD medication dosing patterns and visualising relative effect over time. These models are intentionally simple and tuned for quick iteration, not scientific accuracy.
+Proof‑of‑concept (PoC) scripts for exploring ADHD medication dosing patterns and visualising relative effect over time. These models are **intentionally simple** and tuned for quick iteration, **not scientific accuracy.**
 
 > [!IMPORTANT]
 > The dose impact and decay models here may not match real pharmacokinetics or perceived effects. Use as exploratory visualisations only — not medical advice.
