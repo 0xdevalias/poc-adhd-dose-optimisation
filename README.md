@@ -90,12 +90,36 @@ python -m pip install -r requirements.txt
 
 ## Running the Scripts
 
+Basic usage:
+
 ```sh
-python graph-dex-only-curves.py
 python graph-vyvanse-with-dex-curves.py
+python graph-dex-only-curves.py
 ```
 
-Each script opens a Matplotlib window with the plotted curves and prints values at key target times in the terminal.
+Optional: save an SVG of the chart (lightweight, good for git):
+
+```sh
+# default filenames in repo root
+python graph-vyvanse-with-dex-curves.py --save-svg
+python graph-dex-only-curves.py --save-svg
+
+# or provide a custom path
+python graph-vyvanse-with-dex-curves.py --save-svg charts/vyv-dex.svg
+python graph-dex-only-curves.py --save-svg charts/dex-only.svg
+```
+
+Each script opens a Matplotlib window and prints values at key target times in the terminal.
+
+### Example Output (SVG)
+
+Vyvanse + Dex (reference scenario):
+
+![Vyvanse + Dex reference](graph-vyvanse-with-dex-curves.svg)
+
+Dex‑only schedule (compared to reference total):
+
+![Dex‑only model](graph-dex-only-curves.svg)
 
 ## License
 

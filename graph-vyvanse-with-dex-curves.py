@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import argparse
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -109,6 +110,21 @@ plt.ylim(0, y_top)
 plt.xlim(8, 32)
 plt.legend(ncol=2, fontsize=9)
 plt.tight_layout()
+
+# Optional: save an SVG of the chart
+parser = argparse.ArgumentParser(add_help=False)
+parser.add_argument("--save-svg", nargs="?", const="default", metavar="PATH",
+                    help="Optionally save the chart as an SVG. Provide a path or omit for a default filename.")
+try:
+    args, _ = parser.parse_known_args()
+    svg_path = None
+    if getattr(args, "save_svg", None) is not None:
+        svg_path = args.save_svg if args.save_svg != "default" else "graph-vyvanse-with-dex-curves.svg"
+    if svg_path:
+        plt.savefig(svg_path, format="svg", bbox_inches="tight")
+except SystemExit:
+    pass  # ignore argparse errors in interactive contexts
+
 plt.show()
 
 # === Values at key targets for Vyvanse+Dex ===
