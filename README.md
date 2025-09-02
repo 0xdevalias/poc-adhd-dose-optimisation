@@ -17,6 +17,7 @@ Proof‑of‑concept (PoC) scripts for exploring ADHD medication dosing patterns
   - [Option B: Standard virtualenv](#option-b-standard-virtualenv)
 - [Running the Scripts](#running-the-scripts)
 - [License](#license)
+- [See Also](#see-also)
 <!-- TOC end -->
 
 ## What’s Included
@@ -135,3 +136,9 @@ Each script opens a Matplotlib window and prints values at key target times in t
 ## License
 
 See the [LICENSE](LICENSE) file in this repository.
+
+## See Also
+
+- https://github.com/0xdevalias/poc-linear-programming
+  - > poc-linear-programming
+  - > Proof of Concept (PoC) code/notes exploring using linear programming and similar for optimisation.
