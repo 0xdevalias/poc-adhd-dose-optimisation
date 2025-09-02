@@ -10,7 +10,6 @@ Proof‑of‑concept (PoC) scripts for exploring ADHD medication dosing patterns
 - Simplified one‑compartment Bateman model; parameters are hand‑tuned for plausible shapes.
 - “Perceived effect” uses a shorter effective half‑life to better match how IR Dex often feels, not measured plasma kinetics.
 - Doses and schedules in scripts are examples only.
-- Visual styles include a subtle dashed grid and faint color‑matched vertical lines at Dex dose times to aid reading without distraction.
 
 ### Toggling Dex IR Models (Perceived vs PK)
 
@@ -38,8 +37,6 @@ dex_mode_label = "Perceived effect — ka=1.40, t1/2=2.7h"
 
 - `graph-vyvanse-with-dex-curves.py`: Models Vyvanse with Dex IR top‑ups (the “reference” scenario) with stop‑after projections.
 - `graph-dex-only-curves.py`: Models a Dex IR‑only schedule and compares it against a reference Vyvanse+Dex total.
-
-Both plotting scripts share the same structure and section order to keep diffs clean: helpers → time axis → pharmacokinetics → reference/schedule → y‑limits → plot → values at key targets.
 
 ## Environment Setup
 
