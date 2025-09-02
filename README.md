@@ -5,6 +5,21 @@ Proof‑of‑concept (PoC) scripts for exploring ADHD medication dosing patterns
 > [!IMPORTANT]
 > The dose impact and decay models here may not match real pharmacokinetics or perceived effects. Use as exploratory visualisations only — not medical advice.
 
+## What’s Included
+
+- `graph-vyvanse-with-dex-curves.py`: Models Vyvanse with Dex IR top‑ups (the “reference” scenario) with stop‑after projections.
+- `graph-dex-only-curves.py`: Models a Dex IR‑only schedule and compares it against a reference Vyvanse+Dex total.
+
+### Example Output
+
+Vyvanse + Dex (reference scenario):
+
+![Vyvanse + Dex reference](graph-vyvanse-with-dex-curves.svg)
+
+Dex‑only schedule (compared to reference total):
+
+![Dex‑only model](graph-dex-only-curves.svg)
+
 ## Notes and Limitations
 
 - Simplified one‑compartment Bateman model; parameters are hand‑tuned for plausible shapes.
@@ -32,11 +47,6 @@ ka_ir          = 1.4               # tuned for Tmax ≈ 1–2 h
 ke_ir          = np.log(2) / 2.7   # effective half-life (t½) ≈ 3–4 h
 dex_mode_label = "Perceived effect — ka=1.40, t1/2=2.7h"
 ```
-
-## What’s Included
-
-- `graph-vyvanse-with-dex-curves.py`: Models Vyvanse with Dex IR top‑ups (the “reference” scenario) with stop‑after projections.
-- `graph-dex-only-curves.py`: Models a Dex IR‑only schedule and compares it against a reference Vyvanse+Dex total.
 
 ## Environment Setup
 
@@ -107,16 +117,6 @@ python graph-dex-only-curves.py --save-svg charts/dex-only.svg
 ```
 
 Each script opens a Matplotlib window and prints values at key target times in the terminal.
-
-### Example Output (SVG)
-
-Vyvanse + Dex (reference scenario):
-
-![Vyvanse + Dex reference](graph-vyvanse-with-dex-curves.svg)
-
-Dex‑only schedule (compared to reference total):
-
-![Dex‑only model](graph-dex-only-curves.svg)
 
 ## License
 
