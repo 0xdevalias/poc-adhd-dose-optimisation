@@ -52,7 +52,6 @@ ka_ir          = 1.4               # tuned for Tmax ≈ 1–2 h
 ke_ir          = np.log(2) / 2.7   # effective half-life (t½) ≈ 3–4 h
 dex_mode_label = "Perceived effect — ka=1.40, t1/2=2.7h"
 
-
 # === Reference scenario: Vyvanse + Dex ===
 # Use the same 'times' + 'doses' pattern for Vyvanse and Dex add-ons
 t_vyv          = [8.0]                 # Vyvanse dose time(s) (h of day)
