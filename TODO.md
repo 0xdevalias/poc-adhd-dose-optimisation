@@ -35,6 +35,79 @@
     - `pd_peak_scale`: match perceived peak to PK (0.9–1.1 common);
     - `pd_max_scale`: cap perceived relative to PK (set 1.0 to never exceed PK).
     - `pd_floor`: mask tiny tails to declutter the chart.
-  - Note Vyvanse conversion helper (1 mg Vyvanse ≈ 0.4 mg dex) and show the capsule→dex table.
+  - Note Vyvanse conversion helper (1 mg Vyvanse ≈ 0.30 mg dex; ~29–32% by mass) and show the capsule→dex table (e.g., 30 mg ≈ 9 mg dex).
   - Document new CLI flags for the kernel script with 2–3 copy‑paste examples.
   - Ensure default SVG filenames are listed for all scripts.
+
+- Pharmacology refinements (Vyvanse→Dex model)
+  - Conversion factor:
+    - Default to ~0.295 (29.5%) lisdexamfetamine→dextroamphetamine by mass.
+    - Add `vyv_to_dex_mg(vyv_mg: float, conv: float = 0.295) -> float` helper. Validate non‑negative.
+    - Sanity table in docs: 20→~6 mg, 30→~9 mg, 40→~12 mg, 50→~15 mg dex.
+    - Add CLI override `--vyv2dex FLOAT` to tweak conversion for sensitivity analysis.
+  - Timing/profile (not front‑loaded):
+    - Model gradual conversion with a delay/shape so dex peaks ~3.5–4.5 h post‑dose (prodrug ~1 h).
+    - Implement as: conversion kernel (e.g., gamma or shifted mono‑exponential) convolved with dex elimination, or a Bateman‑style absorption+elimination where absorption reflects RBC conversion (not GI only).
+    - Add `--vyv-delay FLOAT` (default ~3.5) to shift dex peak timing; validate reasonable range (2–5 h).
+  - Half‑life and clearance:
+    - Use dex t1/2 ~10–12 h for baseline; derive `ke = ln(2)/t1/2` instead of hardcoding.
+    - Keep linear kinetics for clinically relevant dose range.
+  - Food effect (Tmax shift only):
+    - Add optional `--food-delay FLOAT` (default 0–1 h) to delay conversion peak without changing AUC/Cmax materially.
+  - RBC hydrolysis (not CYP for conversion):
+    - Note in docs that lisdexamfetamine→dex conversion occurs in red blood cells via enzymatic hydrolysis; not via CYP450.
+  - CYP2D6 interactions (dex metabolism):
+    - Add `--cyp2d6-scale FLOAT` (default 1.0) to scale dex clearance for inhibitor/poor metabolizer scenarios (e.g., 0.7–0.9) or inducer (e.g., 1.1–1.3). Keep as a modeling knob; document examples (SSRIs like paroxetine/fluoxetine may increase exposure).
+  - Urinary pH effects (renal excretion):
+    - Add simple toggles `--acidic`/`--alkaline` or a numeric `--urine-ph-scale FLOAT` to scale dex elimination rate (`ke`), with guidance that acidic increases clearance (shorter t1/2), alkaline decreases clearance (longer t1/2).
+  - Sex/weight notes:
+    - Document that, weight‑normalized, females may show slightly lower AUC/Cmax; keep kinetics linear. No separate curve unless data provided; note as interpretation guidance.
+  - Validation checks:
+    - Quick unit tests/asserts: 30 mg Vyvanse → ~9 mg dex; increasing `--alkaline` lowers ke and raises AUC; `--food-delay` shifts Tmax but preserves AUC within tolerance.
+  - Citations / References:
+    - Add sources in README (FDA label, Carlat fact sheet, Wikipedia pharmacology pages, RBC conversion references) and a short “assumptions and simplifications” section.
+    - Quick links (for modeling notes above):
+      - Stimulant Equivalency Table: https://studylib.net/doc/8261622/stimulant-equivalency-table
+      - Wikipedia — Dextroamphetamine: https://en.wikipedia.org/wiki/Dextroamphetamine
+      - FDA Access Data — Vyvanse label (2007): https://www.accessdata.fda.gov/drugsatfda_docs/label/2007/021977lbl.pdf
+      - The Carlat Report — Lisdexamfetamine (Vyvanse) Fact Sheet: https://www.thecarlatreport.com/ext/resources/factsheets/CMFB2e/LISDEXAMFETAMINE-%28Vyvanse%29-Fact-Sheet.pdf
+      - Wikipedia — Lisdexamfetamine: https://en.wikipedia.org/wiki/Lisdexamfetamine
+      - MedicalHubNews — How is Vyvanse Metabolized: https://medicalhubnews.com/drugs/adhd/lisdexamfetamine/vyvanse/how-is-vyvanse-metabolized/
+      - Psych Scene Hub — Dexamphetamine & Lisdexamfetamine: https://psychscenehub.com/psychbytes/dexamphetamine-and-lisdexamfetamine-mechanism-of-action-side-effects-and-dosing/
+
+  - LDX 30 mg pipeline + model (engineer-friendly)
+    - Pipeline overview for a single 30 mg Vyvanse dose:
+      - Gut → blood (intact LDX absorption): transported by PEPT1; plasma LDX peaks ~1 h (fasted) [1][2].
+      - Blood (RBC conversion): LDX → d-amphetamine + L-lysine; t1/2 for LDX disappearance ≈1.6 h in whole blood; ≈1.0 h in isolated RBC fraction; high-capacity system [1].
+      - Dex kinetics (felt effect): dex Tmax ~3.8–4.4 h (food may delay ~+1 h); dex t1/2 ~10–13 h with gradual taper [2][3].
+    - Stoichiometry (upper bound total dex base produced from LDX):
+      - 30 mg LDX → ~8.9 mg dex base; 50 mg → ~14.8 mg; 70 mg → ~20.8 mg [4]. Production is metered over time, not instantaneous.
+    - Simple two-step first-order model (for plotting/intuition):
+      - Absorption (gut→blood, intact LDX): ka = ln(2)/1.0 h.
+      - Conversion (LDX→dex in blood): k_conv = ln(2)/1.6 h (whole-blood t1/2).
+      - Dex elimination: k_elim_dex = ln(2)/11 h (mid-range adult t1/2).
+      - Dose_LDX = 30 mg; mass-conversion factor f = 0.295 (1 mg LDX → 0.295 mg dex base).
+      - LDX_blood(t) (Bateman form): Dose * ka/(k_conv - ka) * (e^{-ka t} - e^{-k_conv t}).
+      - Dex input rate: Rate_dex_in(t) = k_conv * LDX_blood(t) * f.
+      - Dex concentration: convolution of input with first-order elimination (delays dex peak to ~3.5–4 h, consistent with data).
+    - Cumulative dex produced over time (dex base; out of ~8.9 mg max):
+      - 0.5 h: ~0.28 mg; 1 h: ~0.92 mg; 2 h: ~2.61 mg; 3 h: ~4.26 mg; 4 h: ~5.60 mg; 6 h: ~7.33 mg; 8 h: ~8.17 mg; 12 h: ~8.72 mg.
+      - Interpretation: RBCs meter conversion so dex levels build, peak ~3.5–4 h, then decline slowly (t1/2 ~10–13 h).
+    - References for this subsection:
+      - [1] Absorption/conversion details (PEPT1, RBC half-lives): https://pmc.ncbi.nlm.nih.gov/articles/PMC2898170/
+      - [2] Clinical kinetics summary (HCP): https://www.medicine.com/drug/lisdexamfetamine/hcp
+      - [3] FDA label: https://www.accessdata.fda.gov/drugsatfda_docs/label/2007/021977lbl.pdf
+      - [4] TGA stoichiometry (dex base equivalents): https://www.tga.gov.au/sites/default/files/auspar-lisdexamfetamine-dimesilate-131023.pdf
+  - See Also:
+    - https://en.wikipedia.org/wiki/Dextroamphetamine#Pharmacokinetics
+    - https://en.wikipedia.org/wiki/Lisdexamfetamine#Pharmacokinetics
+      - https://www.frontiersin.org/journals/pharmacology/articles/10.3389/fphar.2017.00617/full
+        - > Pharmacokinetics and Pharmacodynamics of Lisdexamfetamine Compared with D-Amphetamine in Healthy Subjects
+      - https://edoc.unibas.ch/entities/publication/1c3864e8-6e83-4762-83d3-951adccd7385
+        - > Effects of lisdexamfetamine on plasma steroid concentrations compared with d-amphetamine in healthy subjects: A randomized, double-blind, placebo-controlled study
+    - https://pmc.ncbi.nlm.nih.gov/articles/PMC2898170
+      - > Absorption of lisdexamfetamine dimesylate and its enzymatic conversion to d-amphetamine (2010)
+    - https://www.adhdmedcalc.com/
+      - > ADHD Medication Calculator/Converter
+    - https://www.psychiatrictimes.com/view/how-to-switch-stimulants-dosing-guide-for-adhd
+      - > How to Switch Stimulants: A Dosing Guide for ADHD
