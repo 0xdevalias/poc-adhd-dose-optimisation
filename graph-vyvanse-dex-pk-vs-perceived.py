@@ -1,0 +1,266 @@
+#!/usr/bin/env python3
+
+"""
+Vyvanse (LDX → d-amphetamine) + Dex IR — PK & perceived (PD) overlay
+
+• PK curves (solid): model plasma concentration. Vyvanse and Dex share the same
+  elimination half-life (ke), while Dex absorbs faster (higher ka).
+• Perceived curves (dotted): perceived/pharmacodynamic response derived from PK
+  via a shaping kernel (biexponential band-pass). This helps illustrate why
+  perceived effect can peak later and wear off sooner than plasma.
+• Stop-after projections: branches that show what happens if no further Dex doses
+  are taken after a given point (auto-generated for each Dex dose).
+
+Usage:
+  - Adjust the VYVANSE list below for Vyvanse dose(s). Each entry is (time_of_day, dose_mg).
+  - Adjust the DEX list below for Dex dose(s). Each entry is (time_of_day, dose_mg).
+  - Any number of Dex doses are supported; labels and projections update automatically.
+"""
+
+import argparse
+import numpy as np
+import matplotlib.pyplot as plt
+
+# === Core math helpers ===
+def bateman(t, dose, t0, ka, ke):
+    """One-compartment Bateman function for an oral dose."""
+    c = np.zeros_like(t)
+    m = t >= t0
+    tm = t[m] - t0
+    if abs(ka - ke) < 1e-9:
+        ka += 1e-6
+    c[m] = dose * (ka / (ka - ke)) * (np.exp(-ke * tm) - np.exp(-ka * tm))
+    c[c < 0] = 0
+    return c
+
+def curves_from_schedule(t, schedule, ka, ke):
+    """Generate a curve for each (time,dose) in the schedule."""
+    curves = [bateman(t, d, td, ka, ke) for td, d in schedule]
+    for curve, (td, _) in zip(curves, schedule):
+        curve[t < td] = np.nan
+    return curves
+
+def label_hour(h):
+    """Format a decimal hour as a human-readable 12h clock label."""
+    h24 = int(h % 24)
+    suffix = "am" if h24 < 12 else "pm"
+    h12 = h24 % 12
+    if h12 == 0:
+        h12 = 12
+    return f"{h12}{suffix}"
+
+# === Perceived-effect kernel ===
+
+# === Global defaults ===
+T_START, T_END, RES_MIN = 8.0, 32.0, 1
+KA_VYV, KA_DEX = 0.80, 1.00
+KE_AMP = np.log(2) / 11.0
+DEFAULT_SVG = "graph-vyvanse-dex-pk-vs-perceived.svg"
+
+# Vyvanse capsule → dex equivalent helper
+#
+# | Vyvanse dose | Approx. Dex equivalent |
+# | ------------ | ---------------------- |
+# | 20 mg        | 8 mg                   |
+# | 30 mg        | 12 mg                  |
+# | 40 mg        | 16 mg                  |
+# | 50 mg        | 20 mg                  |
+# | 60 mg        | 24 mg                  |
+# | 70 mg        | 28 mg                  |
+#
+# Based on FDA conversion and pharmacokinetic data: about 1 mg Vyvanse → 0.4 mg dex.
+def vyvanse_cap_to_dex_eq(mg_capsule: float) -> float:
+    return float(mg_capsule) * 0.4
+
+# Example dosing schedule 
+VYVANSE = [(8.0, vyvanse_cap_to_dex_eq(30.0))]
+DEX = [(8.0, 5.0), (11.0, 5.0), (13.0, 5.0)]  # Dex 5mg at 8am, 11am, 1pm
+
+# Perceived-effect (PD) parameters
+default_PD = dict(
+    pd_floor=0.05,     # mask PD below this threshold for clarity
+    # Kernel parameters
+    dex_tau_r=0.5,     # Dex perceived rise time constant (h)
+    dex_tau_d=3.0,     # Dex perceived decay time constant (h)
+    dex_gain=1.0,      # Dex PD gain (pre-matching)
+    vyv_tau_r=1.0,     # Vyvanse perceived rise time constant (h)
+    vyv_tau_d=6.0,     # Vyvanse perceived decay time constant (h)
+    vyv_gain=1.0,      # Vyvanse PD gain (pre-matching)
+    pd_peak_scale=1.0, # Target PD_peak = this * PK_peak
+    pd_max_scale=1.1   # Clamp PD ≤ this * PK_peak
+)
+
+# === Styling (centralized colors) ===
+# Base palette for per-dose Dex lines (PK/PD and stop-after branches)
+DEX_BASE_COLORS = [
+    "tab:purple", "tab:green", "gold", "tab:red",
+    "tab:brown", "tab:pink", "tab:olive", "tab:cyan",
+    "mediumpurple", "darkseagreen", "lightsalmon"
+]
+
+# Named colors used across the plot
+COLORS = {
+    "total_pk": "tab:blue",     # also used by Total (perceived)
+    "vyv_pk": "tab:orange",     # also used by Vyvanse (perceived)
+    "neutral_marker": "tab:gray" # fallback for vertical markers
+}
+
+# === Build PK curves ===
+def build_pk(t):
+    vyv_curves = curves_from_schedule(t, VYVANSE, KA_VYV, KE_AMP)
+    dex_curves = curves_from_schedule(t, DEX, KA_DEX, KE_AMP)
+    vyv_sum = np.nansum(np.vstack([np.nan_to_num(c) for c in vyv_curves]), axis=0) if vyv_curves else np.zeros_like(t)
+    dex_sum = np.nansum(np.vstack([np.nan_to_num(c) for c in dex_curves]), axis=0) if dex_curves else np.zeros_like(t)
+    return vyv_sum, vyv_curves, dex_curves, vyv_sum + dex_sum
+
+# === PK→PD transform ===
+def mask_below(arr, thresh):
+    """Return a copy with values < thresh masked as NaN for plotting clarity."""
+    a = np.array(arr, copy=True)
+    m = a < thresh
+    a[m] = np.nan
+    return a
+
+def pd_kernel_biexp(dt_h, tau_r, tau_d, gain=1.0):
+    """Zero-DC biexponential kernel for PD shaping (band-pass like).
+
+    k(t) = e^{-t/tau_r}/tau_r - e^{-t/tau_d}/tau_d, t>=0
+    Normalized so the positive lobe area equals 1 (stable amplitude),
+    then scaled by `gain`.
+    """
+    tau_r = max(1e-3, float(tau_r))
+    tau_d = max(tau_r + 1e-3, float(tau_d))
+    t_max = int(np.ceil(8 * tau_d / dt_h))
+    t_k = np.arange(0, t_max + 1) * dt_h
+    k = np.exp(-t_k / tau_r) / tau_r - np.exp(-t_k / tau_d) / tau_d
+    # Normalize by positive lobe area (L1+), more robust than peak norm
+    pos_area = np.sum(np.clip(k, 0, None)) * dt_h
+    if pos_area <= 1e-9:
+        pos_area = 1.0
+    k = (k / pos_area) * gain
+    return k
+
+def apply_pd_kernel(curve, dt_h, tau_r, tau_d, gain=1.0, match='peak', peak_scale=1.0, clamp_scale=None):
+    """Apply kernel PD and scale to match PK peak proportion.
+
+    - match='peak': rescale PD so PD_peak = peak_scale * PK_peak.
+    - clamp_scale: if set (e.g., 1.2), cap PD at clamp_scale * PK_peak.
+    """
+    c = np.nan_to_num(curve)
+    k = pd_kernel_biexp(dt_h, tau_r, tau_d, gain)
+    y = np.convolve(c, k, mode='full')[:len(c)]
+    y = np.maximum(y, 0.0)
+    if match == 'peak':
+        pk_peak = float(np.max(c)) if c.size else 1.0
+        pd_peak = float(np.max(y)) if y.size else 1.0
+        if pd_peak > 1e-9:
+            y = y * ((peak_scale * pk_peak) / pd_peak)
+        if clamp_scale is not None and pk_peak > 0:
+            y = np.minimum(y, clamp_scale * pk_peak)
+    return y
+
+# === Plotting ===
+def plot_overlay(t, vyv_sum, vyv_pk_curves, dex_pk_curves, total_pk, PD):
+    fig, ax = plt.subplots(figsize=(13, 7))
+    # Colors come from centralized DEX_BASE_COLORS / COLORS
+
+    # PK curves (solid)
+    total_pk_line, = ax.plot(t, total_pk, linewidth=2.6, color=COLORS['total_pk'], label="Total (PK)")
+    total_pk_color = total_pk_line.get_color()
+    vyv_pk_line, = ax.plot(t, vyv_sum, linewidth=2.0, color=COLORS['vyv_pk'], label="Vyvanse (PK)")
+    vyv_pk_color = vyv_pk_line.get_color()
+    # Build effective Dex colors that avoid Total/Vyvanse colors
+    reserved = {total_pk_color, vyv_pk_color}
+    dex_colors = [c for c in DEX_BASE_COLORS if c not in reserved] or DEX_BASE_COLORS[:]
+    dex_pk_colors = []
+    for i, ((td, d), curve) in enumerate(zip(DEX, dex_pk_curves)):
+        col = dex_colors[i % len(dex_colors)]
+        pk_line, = ax.plot(t, curve, linestyle="--", linewidth=1.5, color=col, label=f"Dex {d}mg @ {label_hour(td)} (PK)")
+        dex_pk_colors.append(pk_line.get_color())
+
+    # Perceived (PD) curves (dotted) — component-wise using kernel
+    dt_h = t[1] - t[0]
+    # Zero-DC biexponential kernel to produce faster wear-off perceived effect
+    vyv_pd_components = [apply_pd_kernel(
+                             np.nan_to_num(vc), dt_h,
+                             PD.get('vyv_tau_r', 1.0), PD.get('vyv_tau_d', 6.0), PD.get('vyv_gain', 1.0),
+                             match='peak', peak_scale=PD.get('pd_peak_scale', 1.0), clamp_scale=PD.get('pd_max_scale', None))
+                         for (td, _), vc in zip(VYVANSE, vyv_pk_curves)] if vyv_pk_curves else []
+    dex_pd_components = [apply_pd_kernel(
+                             np.nan_to_num(dc), dt_h,
+                             PD.get('dex_tau_r', 0.5), PD.get('dex_tau_d', 3.0), PD.get('dex_gain', 1.0),
+                             match='peak', peak_scale=PD.get('pd_peak_scale', 1.0), clamp_scale=PD.get('pd_max_scale', None))
+                         for (td, _), dc in zip(DEX, dex_pk_curves)]
+    vyv_pd = np.nansum(np.vstack(vyv_pd_components), axis=0) if vyv_pd_components else np.zeros_like(t)
+    total_pd = vyv_pd + (np.nansum(np.vstack(dex_pd_components), axis=0) if dex_pd_components else 0.0)
+
+    # Apply visibility mask (keep Total perceived curve intact apart from the floor)
+    floor = float(PD.get('pd_floor', 0.0))
+    total_pd_m = mask_below(total_pd, floor)
+    vyv_pd_m = mask_below(vyv_pd, floor)
+    dex_pd_components_m = [mask_below(curve, floor) for curve in dex_pd_components]
+
+    # Perceived component curves are plotted fully; no special masking is applied beyond the floor.
+    ax.plot(t, total_pd_m, linewidth=2.6, linestyle=":", color=total_pk_color, alpha=0.9, label="Total (perceived)")
+    ax.plot(t, vyv_pd_m, linewidth=2.0, linestyle=":", color=vyv_pk_color, alpha=0.85, label="Vyvanse (perceived)")
+    for i, ((td, d), curve) in enumerate(zip(DEX, dex_pd_components_m)):
+        col = dex_pk_colors[i] if i < len(dex_pk_colors) else (dex_colors[i % len(dex_colors)])
+        ax.plot(t, curve, linestyle=":", linewidth=1.5, alpha=0.8, color=col, label=f"Dex {d}mg @ {label_hour(td)} (perceived)")
+
+    # Stop-after projections
+    def masked_from(time0, curve):
+        m = curve.copy()
+        m[t < time0] = np.nan
+        return m
+
+    # Do not render the last stop-after branch; it matches the final total
+    for i in range(max(0, len(DEX) - 1)):
+        stop_pk = vyv_sum + sum(np.nan_to_num(c) for c in dex_pk_curves[:i+1])
+        # PD branch: sum PD components up to i (plus Vyvanse PD)
+        stop_pd = vyv_pd + np.nansum(np.vstack(dex_pd_components[:i+1]), axis=0)
+        branch_time = DEX[i+1][0]
+        col = dex_pk_colors[i] if i < len(dex_pk_colors) else (dex_colors[i % len(dex_colors)])
+        ax.plot(t, masked_from(branch_time, stop_pk), linestyle="--", linewidth=1.0, color=col, alpha=0.6, label=f"Stop after Dex {i+1} (PK)")
+        ax.plot(t, masked_from(branch_time, stop_pd), linestyle=":", linewidth=1.0, color=col, alpha=0.9, label=f"Stop after Dex {i+1} (PD)")
+
+    # Mark dose times (verticals matching dose colors)
+    for td, _ in VYVANSE:
+        ax.axvline(td, linestyle=":", linewidth=1.2, alpha=0.6, color=vyv_pk_color, zorder=4)
+    for i, (td, _) in enumerate(DEX):
+        col = dex_pk_colors[i] if i < len(dex_pk_colors) else COLORS['neutral_marker']
+        ax.axvline(td, linestyle=":", linewidth=1.2, alpha=0.6, color=col, zorder=4)
+
+    # Axes/labels
+    ax.set_xticks(range(int(T_START), int(T_END) + 1))
+    ax.set_xticklabels([label_hour(h) for h in range(int(T_START), int(T_END) + 1)])
+    ax.grid(True, alpha=0.3, linestyle="--")
+    ax.set_title(
+        f"Vyvanse + Dex — PK (solid) vs perceived (dotted) | τr={PD.get('dex_tau_r',0.5)}h, τd={PD.get('dex_tau_d',3.0)}h, peak≈{PD.get('pd_peak_scale',1.0)}×PK, clamp≤{PD.get('pd_max_scale',1.1)}×PK"
+    )
+    ax.set_xlabel("Hour of Day")
+    ax.set_ylabel("Relative Units (a.u.)")
+    ymax = float(np.nanmax(total_pk))
+    ax.set_ylim(0, np.ceil(ymax * 1.1))
+    ax.set_xlim(T_START, T_END)
+    ax.legend(fontsize=8, ncol=2)
+    fig.tight_layout()
+    return fig
+
+# === Entrypoint ===
+def run(save_svg=None):
+    t = np.linspace(T_START, T_END, int((T_END - T_START) * 60 / RES_MIN) + 1)
+    vyv_sum, vyv_pk_curves, dex_pk_curves, total_pk = build_pk(t)
+    fig = plot_overlay(t, vyv_sum, vyv_pk_curves, dex_pk_curves, total_pk, default_PD)
+    if save_svg:
+        path = save_svg if save_svg != "default" else DEFAULT_SVG
+        fig.savefig(path, format="svg", bbox_inches="tight")
+    plt.show()
+
+if __name__ == "__main__":
+    p = argparse.ArgumentParser()
+    p.add_argument(
+        '--save-svg', nargs='?', const='default',
+        help=f'Optionally save an SVG; omit path to use default: {DEFAULT_SVG}'
+    )
+    args = p.parse_args()
+    run(save_svg=args.save_svg)
