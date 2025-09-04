@@ -1,6 +1,7 @@
 # TODO
 
 - Refactor plotting scripts to DRY shared logic
+  - As part of this, it might be useful to look at the changes already made in `graph-vyvanse-dex-pk-vs-perceived.py`; it has some cleaner patterns for some parts
   - Targets: `graph-dex-only-curves.py`, `graph-vyvanse-with-dex-curves.py`
   - Extract common helpers into a small module (e.g. `pk_plot_utils.py`):
     - `bateman`, `label_hour`, `curves_from_schedule`
@@ -9,4 +10,31 @@
     - Keep the simple toggle-by-comment pattern intact
   - Parameterize schedules/doses; expose functions that build curves and totals
   - Add CLI args
-
+- CLI polish for `graph-vyvanse-dex-pk-vs-perceived.py`
+  - Add flags (with sensible defaults and validation):
+    - `--save-svg [PATH]`: save SVG to PATH; if omitted, use script default filename constant.
+    - `--dex-tau-r FLOAT` (default 0.5): Dex perceived rise time constant (hours). Typical range 0.3–0.7.
+    - `--dex-tau-d FLOAT` (default 3.0): Dex perceived decay time constant (hours). Typical range 2.6–3.4.
+    - `--pd-peak-scale FLOAT` (default 1.0): target PD peak as a multiple of PK peak (e.g., 1.0 → match PK peak).
+    - `--pd-max-scale FLOAT` (default 1.1): clamp PD so it does not exceed this multiple of PK peak. Validate `>= pd_peak_scale`.
+    - `--pd-floor FLOAT` (default 0.05): visibility threshold; values below are masked in plots.
+    - Optional schedule flags:
+      - `--vyv-capsule FLOAT` (default 30): Vyvanse capsule mg; convert to dex‑equivalent with helper.
+      - `--dex` STRING: simple Dex list parser, e.g. `"8=5,11=5,13=5"` (hours=mg). Validate parsing and hours within window.
+  - Behavior:
+    - CLI overrides the in‑file defaults when flags are provided; otherwise keep current hardcoded defaults.
+    - Validate and print concise errors for invalid values (e.g., non‑numeric, negative, mismatched pairs).
+  - Examples to test (for README):
+    - `python graph-vyvanse-dex-pk-vs-perceived.py --save-svg`
+    - `python graph-vyvanse-dex-pk-vs-perceived.py --dex-tau-r 0.35 --dex-tau-d 3.2 --pd-peak-scale 1.0 --pd-max-scale 1.0`
+    - `python graph-vyvanse-dex-pk-vs-perceived.py --vyv-capsule 40 --dex "8=5,12=5" --save-svg charts/pk-vs-perceived.svg`
+- README / docs updates
+  - Add a short “How to tune perceived” section covering:
+    - `τr` (rise): smaller → faster onset and earlier peak; typical 0.3–0.7 h for Dex IR.
+    - `τd` (decay): smaller → shorter perceived duration; typical 2.6–3.4 h for Dex IR.
+    - `pd_peak_scale`: match perceived peak to PK (0.9–1.1 common);
+    - `pd_max_scale`: cap perceived relative to PK (set 1.0 to never exceed PK).
+    - `pd_floor`: mask tiny tails to declutter the chart.
+  - Note Vyvanse conversion helper (1 mg Vyvanse ≈ 0.4 mg dex) and show the capsule→dex table.
+  - Document new CLI flags for the kernel script with 2–3 copy‑paste examples.
+  - Ensure default SVG filenames are listed for all scripts.
