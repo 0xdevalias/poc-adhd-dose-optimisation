@@ -39,6 +39,28 @@
   - Document new CLI flags for the kernel script with 2–3 copy‑paste examples.
   - Ensure default SVG filenames are listed for all scripts.
 
+- Output filename templating
+  - Add an optional filename template mode for SVG exports without replacing the current default filenames.
+  - Allow a template via a new flag (e.g., `--filename-template` or `--save-svg-template`) that can be used alongside `--save-svg`.
+  - Support tokens (expanded at runtime):
+    - `{date}`: local date in `YYYY-MM-DD`.
+    - `{sched}`: Dex schedule string like `5mg@9.25+5mg@11+5mg@12.75` (sorted by time).
+    - `{graph}`: short graph id (e.g., `pk-vs-perceived`, `dex-only-curves`, `vyvanse-with-dex-curves`).
+    - `{vyv}`: Vyvanse capsule summary like `vyv30mg` (empty when not applicable).
+    - `{mode}`: `pk`, `perceived`, or `pk-vs-perceived` depending on the current toggle.
+  - Behavior:
+    - If the template includes unknown tokens, print a concise error with the list of supported tokens.
+    - Auto-append `.svg` if the template does not specify an extension.
+    - Sanitize to safe filename characters `[A-Za-z0-9._+@-]`; replace others with `-` and collapse duplicate separators.
+    - When optional tokens expand to empty, collapse adjacent `-` characters to avoid awkward `--` runs.
+  - Examples:
+    - `--filename-template "{date}-{sched}-{graph}.svg"`
+      - → `2025-09-07-5mg@9.25+5mg@11+5mg@12.75-pk-vs-perceived.svg`
+    - `--filename-template "{date}-{vyv}-{sched}-{graph}.svg"`
+      - → `2025-09-07-vyv30mg-5mg@9.25+5mg@11-dex-only-curves.svg`
+  - Nice-to-have:
+    - `--filename-mode schedule-date` as shorthand for `{date}-{sched}-{graph}.svg`.
+    - Environment default via `PK_FILENAME_TEMPLATE` when `--save-svg` is provided without an explicit path.
 
 - Redose suggestion (Dex IR)
   - Goal: suggest a practical redose window based on the current total perceived curve to maintain a stable plateau while avoiding peak stacking and late‑day tail.
