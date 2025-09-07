@@ -39,6 +39,35 @@
   - Document new CLI flags for the kernel script with 2–3 copy‑paste examples.
   - Ensure default SVG filenames are listed for all scripts.
 
+
+- Redose suggestion (Dex IR)
+  - Goal: suggest a practical redose window based on the current total perceived curve to maintain a stable plateau while avoiding peak stacking and late‑day tail.
+  - Heuristics (tunable):
+    - Threshold crossing: first time the total perceived curve drops below `redose_threshold` × peak (e.g., 0.55–0.70) after `min_gap` since the last Dex dose.
+    - Slope gate: only consider times where dC/dt is negative and the fall rate is moderate (avoid suggesting too early on a steep descent).
+    - Min spacing: enforce `redose_min_gap` ≈ 3.0–4.0 h between Dex IR doses (typical clinical spacing).
+    - Peak guard: ensure predicted total at the suggested time with the proposed redose does not exceed `redose_peak_guard` × prior peak (e.g., 0.95–1.00) to limit overshoot.
+    - Day cutoff: do not suggest redose after `redose_cutoff_hour` (e.g., 15.5–16.0) to protect sleep; optionally scale down late‑day suggested dose.
+  - Implementation sketch:
+    - Compute current total perceived curve (respecting active PK/perceived toggle). From `t_last_dex + min_gap`, scan forward to find earliest `t` meeting threshold + slope criteria.
+    - Simulate adding a candidate Dex redose (e.g., same mg as last or `redose_mg`) at `t`; reject if the new total peak at/after `t` violates the peak‑guard.
+    - Return a window `[t, t + redose_window_h]` (e.g., ±0.25–0.5 h around threshold crossing). Nominal suggestion is the midpoint.
+  - CLI/API knobs (for `graph-*-curves.py`):
+    - `--suggest-redose` (flag): enable suggestion logic and plot annotations.
+    - `--redose-threshold FLOAT` (default 0.60): fraction of peak for trigger.
+    - `--redose-min-gap FLOAT` (default 3.0): minimum hours since last Dex.
+    - `--redose-peak-guard FLOAT` (default 1.0): cap on post‑redose peak relative to pre‑redose max.
+    - `--redose-cutoff-hour FLOAT` (default 16.0): latest hour to suggest.
+    - `--redose-window-h FLOAT` (default 0.5): shading width for the window.
+    - `--redose-mg FLOAT` (optional): candidate redose mg (fallback to last Dex mg if omitted).
+  - Visualisation:
+    - Shade the suggested window and draw a dashed vertical line at the nominal time; annotate e.g., "Suggest redose ~11:00 (≈3.0 h since 08:00)".
+    - Print to console the suggested time, rationale (threshold crossing, slope), and predicted post‑redose peak vs guard.
+  - Notes / caveats:
+    - This is a heuristic guide based on a simplified model. Real‑world factors (food delays, urine pH, CYP2D6 inhibitors/inducers, sleep schedule) can shift the true best time.
+    - If subjective effect differs, tune perceived parameters (e.g., `τr`, `τd`) and/or threshold to calibrate.
+  - Future: extend to plan multi‑redose schedules that target a plateau window (e.g., 10:00–15:00) with minimal evening tail by optimising dose size and timing under guards.
+
 - Pharmacology refinements (Vyvanse→Dex model)
   - Conversion factor:
     - Default to ~0.295 (29.5%) lisdexamfetamine→dextroamphetamine by mass.
