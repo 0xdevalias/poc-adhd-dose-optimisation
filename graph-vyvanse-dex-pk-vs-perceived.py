@@ -25,6 +25,7 @@ from utils.save_utils import save_figure_safely
 from utils.dosing_utils import shots_to_caffeine_mg, aeropress_scoops_to_caffeine_mg, grams_to_caffeine_mg
 from utils.pk_models import bateman, caffeine_total_curve, curves_from_schedule
 from utils.plot_utils import label_hour
+from utils.style import DEX_BASE_COLORS, COLORS
 
  
 
@@ -98,21 +99,6 @@ default_PD = dict(
     pd_peak_scale=1.0, # Target PD_peak = this * PK_peak
     pd_max_scale=1.1   # Clamp PD ≤ this * PK_peak
 )
-
-# === Styling (centralized colors) ===
-# Base palette for per-dose Dex lines (PK/PD and stop-after branches)
-DEX_BASE_COLORS = [
-    "tab:purple", "tab:green", "tab:red",
-    "tab:brown", "tab:pink", "tab:olive", "tab:cyan",
-    "mediumpurple", "darkseagreen", "lightsalmon"
-]
-
-# Named colors used across the plot
-COLORS = {
-    "total_pk": "tab:blue",     # also used by Total (perceived)
-    "vyv_pk": "tab:orange",     # also used by Vyvanse (perceived)
-    "neutral_marker": "tab:gray" # fallback for vertical markers
-}
 
 # === Build PK curves ===
 def build_pk(t):
@@ -270,7 +256,7 @@ def plot_overlay(t, vyv_sum, vyv_pk_curves, dex_pk_curves, total_pk, PD, t_start
         if caffeine_total is not None:
             ax_caf = ax.twinx()
             # De-emphasized but readable styling for caffeine scale/line
-            caffeine_color = '#555555'
+            caffeine_color = COLORS['caffeine']
             caffeine_line, = ax_caf.plot(t, caffeine_total, linewidth=1.9, linestyle='-', color=caffeine_color, alpha=0.75, label='Caffeine (PK)')
             # Configure caffeine axis on the LEFT (offset outward) alongside amphetamine scale
             caf_ymax = float(np.nanmax(caffeine_total)) if np.isfinite(np.nanmax(caffeine_total)) else 1.0

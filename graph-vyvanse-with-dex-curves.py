@@ -7,6 +7,7 @@ import math
 from utils.save_utils import save_figure_safely
 from utils.pk_models import bateman, curves_from_schedule
 from utils.plot_utils import label_hour
+from utils.style import DEX_BASE_COLORS, COLORS
 
 def _build_schedule(times, doses):
     return list(zip(times, doses))
@@ -35,18 +36,6 @@ vyv_doses_mg   = [12.0]                # Vyvanse equivalent d-amphetamine (mg)
 
 t_ref_dex      = [8.0, 11.0, 13.0]     # Dex top-up times (h of day)
 ref_dex_mg     = [5.0, 5.0, 5.0]       # Dex top-up doses (mg)
-
-# === Styling (align with PK/PD overlay script) ===
-DEX_BASE_COLORS = [
-    "tab:purple", "tab:green", "tab:red",
-    "tab:brown", "tab:pink", "tab:olive", "tab:cyan",
-    "mediumpurple", "darkseagreen", "lightsalmon"
-]
-COLORS = {
-    "total_pk": "tab:blue",
-    "vyv_pk": "tab:orange",
-    "neutral_marker": "tab:gray",
-}
 
 # === Dynamic 24h window based on earliest dose across all plotted schedules ===
 all_times = []

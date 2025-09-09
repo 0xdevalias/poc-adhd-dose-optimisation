@@ -7,6 +7,7 @@ import math
 from utils.save_utils import save_figure_safely
 from utils.pk_models import bateman, curves_from_schedule
 from utils.plot_utils import label_hour
+from utils.style import DEX_BASE_COLORS, COLORS
 
 def _build_schedule(times, doses):
     return list(zip(times, doses))
@@ -27,18 +28,6 @@ ke_vyv         = np.log(2) / 11.0  # plasma half-life (t½) ≈ 10–12 h
 ka_ir          = 1.4               # tuned for Tmax ≈ 1–2 h
 ke_ir          = np.log(2) / 2.7   # effective half-life (t½) ≈ 3–4 h
 dex_mode_label = "Perceived effect — ka=1.40, t1/2=2.7h"
-
-# === Styling (align with PK/PD overlay script) ===
-DEX_BASE_COLORS = [
-    "tab:purple", "tab:green", "tab:red",
-    "tab:brown", "tab:pink", "tab:olive", "tab:cyan",
-    "mediumpurple", "darkseagreen", "lightsalmon"
-]
-COLORS = {
-    "total_pk": "tab:blue",
-    "vyv_pk": "tab:orange",
-    "neutral_marker": "tab:gray",
-}
 
 # === Reference scenario: Vyvanse + Dex ===
 # Use the same 'times' + 'doses' pattern for Vyvanse and Dex add-ons
