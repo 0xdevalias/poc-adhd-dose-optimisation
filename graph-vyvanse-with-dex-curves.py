@@ -4,6 +4,7 @@ import argparse
 import numpy as np
 import matplotlib.pyplot as plt
 import math
+from utils.save_utils import save_figure_safely
 
 # === Helpers ===
 def bateman(t, dose, t0, ka, ke):
@@ -118,7 +119,7 @@ ymax = np.max(total_ref)
 y_top = np.ceil(ymax * 1.08)  # 8% headroom, rounded up
 
 # === Plot ===
-plt.figure(figsize=(13, 7))
+fig = plt.figure(figsize=(13, 7))
 
 # Projections first (so total overlays overlaps). Color-match by dose index.
 stop_after_lines = []
@@ -181,7 +182,7 @@ try:
     if getattr(args, "save_svg", None) is not None:
         svg_path = args.save_svg if args.save_svg != "default" else "graph-vyvanse-with-dex-curves.svg"
     if svg_path:
-        plt.savefig(svg_path, format="svg", bbox_inches="tight")
+        save_figure_safely(fig, svg_path)
 except SystemExit:
     pass  # ignore argparse errors in interactive contexts
 

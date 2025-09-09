@@ -21,6 +21,7 @@ import argparse
 import numpy as np
 import matplotlib.pyplot as plt
 import math
+from utils.save_utils import save_figure_safely
 
 # === Core math helpers ===
 def bateman(t, dose, t0, ka, ke):
@@ -304,7 +305,7 @@ def run(save_svg=None):
     fig = plot_overlay(t, vyv_sum, vyv_pk_curves, dex_pk_curves, total_pk, default_PD, t_start, t_end)
     if save_svg:
         path = save_svg if save_svg != "default" else DEFAULT_SVG
-        fig.savefig(path, format="svg", bbox_inches="tight")
+        save_figure_safely(fig, path)
     try:
         plt.show()
     except KeyboardInterrupt:
