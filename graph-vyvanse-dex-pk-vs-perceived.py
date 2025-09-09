@@ -235,7 +235,8 @@ def plot_overlay(t, vyv_sum, vyv_pk_curves, dex_pk_curves, total_pk, PD, t_start
     # Mask perceived totals before first dose to avoid a zero baseline
     total_pd_plot = mask_before(first_time, total_pd_m)
     ax.plot(t, total_pd_plot, linewidth=2.6, linestyle=":", color=total_pk_color, alpha=0.9, label="Total (perceived)")
-    ax.plot(t, vyv_pd_m, linewidth=2.0, linestyle=":", color=vyv_pk_color, alpha=0.85, label="Vyvanse (perceived)")
+    if VYVANSE:
+        ax.plot(t, vyv_pd_m, linewidth=2.0, linestyle=":", color=vyv_pk_color, alpha=0.85, label="Vyvanse (perceived)")
     for i, ((td, d), curve) in enumerate(zip(DEX, dex_pd_components_m)):
         col = dex_pk_colors[i] if i < len(dex_pk_colors) else (dex_colors[i % len(dex_colors)])
         ax.plot(t, curve, linestyle=":", linewidth=1.5, alpha=0.8, color=col, label=f"Dex {d}mg @ {label_hour(td)} (perceived)")

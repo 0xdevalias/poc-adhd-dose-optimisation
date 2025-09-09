@@ -139,7 +139,9 @@ for i, included_time, branch_time, curve in stop_after_totals:
 total_line, = plt.plot(t, total_ref_plot,  linewidth=2.6, color=COLORS["total_pk"], label="Total (Vyvanse + Dex)")
 
 # Base components (dashed)
-vyv_line, = plt.plot(t, vyv_curve_ref_plot,  linewidth=2.0, color=COLORS["vyv_pk"], label="Vyvanse 30mg → dex (eq. 12mg) [Tmax≈3.5–4h]")
+vyv_line = None
+if t_vyv and len(t_vyv) > 0:
+    vyv_line, = plt.plot(t, vyv_curve_ref_plot,  linewidth=2.0, color=COLORS["vyv_pk"], label="Vyvanse 30mg → dex (eq. 12mg) [Tmax≈3.5–4h]")
 labels = [f"Dex IR {dose:g}mg @ {label_hour(td)}" for td, dose in zip(t_ref_dex, ref_dex_mg)]
 dex_lines = []
 for i, (curve, lab) in enumerate(zip(ref_dex_curves, labels)):
@@ -162,7 +164,10 @@ plt.ylabel("Relative Effect (arbitrary units)")
 plt.ylim(0, y_top)
 plt.xlim(start_h, end_h)
 # Legend ordering: place stop-after entries at end of legend
-handles = [total_line, vyv_line] + dex_lines + stop_after_lines
+handles = [total_line]
+if vyv_line is not None:
+    handles.append(vyv_line)
+handles += dex_lines + stop_after_lines
 plt.legend(handles=handles, labels=[h.get_label() for h in handles], ncol=2, fontsize=9)
 plt.tight_layout()
 
