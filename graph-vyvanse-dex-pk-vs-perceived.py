@@ -261,7 +261,7 @@ def plot_overlay(t, vyv_sum, vyv_pk_curves, dex_pk_curves, total_pk, PD, t_start
         branch_time = DEX[i+1][0]
         col = dex_pk_colors[i] if i < len(dex_pk_colors) else (dex_colors[i % len(dex_colors)])
         sapk_line, = ax.plot(t, masked_from(branch_time, stop_pk), linestyle="--", linewidth=1.0, color=col, alpha=0.6, label=f"Stop after Dex {i+1} (PK)")
-        sapd_line, = ax.plot(t, masked_from(branch_time, stop_pd), linestyle=":", linewidth=1.0, color=col, alpha=0.9, label=f"Stop after Dex {i+1} (PD)")
+        sapd_line, = ax.plot(t, masked_from(branch_time, stop_pd), linestyle=":", linewidth=1.0, color=col, alpha=0.9, label=f"Stop after Dex {i+1} (perceived)")
         stop_after_lines_pairs.append((sapk_line, sapd_line))
 
     # Mark dose times (verticals matching dose colors)
