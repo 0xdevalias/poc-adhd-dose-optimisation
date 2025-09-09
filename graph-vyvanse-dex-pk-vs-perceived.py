@@ -105,7 +105,7 @@ default_PD = dict(
 # === Styling (centralized colors) ===
 # Base palette for per-dose Dex lines (PK/PD and stop-after branches)
 DEX_BASE_COLORS = [
-    "tab:purple", "tab:green", "gold", "tab:red",
+    "tab:purple", "tab:green", "tab:red",
     "tab:brown", "tab:pink", "tab:olive", "tab:cyan",
     "mediumpurple", "darkseagreen", "lightsalmon"
 ]

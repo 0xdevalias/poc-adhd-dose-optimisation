@@ -52,7 +52,7 @@ dex_mode_label = "Perceived effect — ka=1.40, t1/2=2.7h"
 
 # === Styling (align with PK/PD overlay script) ===
 DEX_BASE_COLORS = [
-    "tab:purple", "tab:green", "gold", "tab:red",
+    "tab:purple", "tab:green", "tab:red",
     "tab:brown", "tab:pink", "tab:olive", "tab:cyan",
     "mediumpurple", "darkseagreen", "lightsalmon"
 ]

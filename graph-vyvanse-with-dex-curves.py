@@ -60,7 +60,7 @@ ref_dex_mg     = [5.0, 5.0, 5.0]       # Dex top-up doses (mg)
 
 # === Styling (align with PK/PD overlay script) ===
 DEX_BASE_COLORS = [
-    "tab:purple", "tab:green", "gold", "tab:red",
+    "tab:purple", "tab:green", "tab:red",
     "tab:brown", "tab:pink", "tab:olive", "tab:cyan",
     "mediumpurple", "darkseagreen", "lightsalmon"
 ]
