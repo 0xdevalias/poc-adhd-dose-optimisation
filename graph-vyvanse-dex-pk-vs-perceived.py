@@ -22,7 +22,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import math
 from utils.save_utils import save_figure_safely
-from utils.pk_models import bateman
+from utils.dosing_utils import shots_to_caffeine_mg, aeropress_scoops_to_caffeine_mg, grams_to_caffeine_mg
+from utils.pk_models import bateman, caffeine_total_curve
 
 def curves_from_schedule(t, schedule, ka, ke):
     """Generate a curve for each (time,dose) in the schedule."""
@@ -67,9 +68,28 @@ def vyvanse_cap_to_dex_eq(mg_capsule: float) -> float:
 VYVANSE = [(8.0, vyvanse_cap_to_dex_eq(30.0))]
 DEX = [(8.0, 5.0), (11.0, 5.0), (13.0, 5.0)]  # Dex 5mg at 8am, 11am, 1pm
 
+# Caffeine schedule examples (each item: (time_h, caffeine_mg[, drink_duration_min[, parts]]))
+# - If duration is provided and > 0, the dose is split uniformly across that duration (in minutes).
+# - Optional 4th field `parts` lets you set how many equal sub-doses to split into across that time.
+# - Use helper conversions to estimate mg: shots_to_caffeine_mg(), aeropress_scoops_to_caffeine_mg(), grams_to_caffeine_mg().
+#
+# Example: 2-shot espresso at 9am sipped over 20 minutes
+# CAFFEINE = [(9.0, shots_to_caffeine_mg(2), 20)]
+#
+# Example: split the same 20 minutes into 4 equal parts explicitly
+# CAFFEINE = [(9.0, shots_to_caffeine_mg(2), 20, 4)]
+#
+# Example: AeroPress with 1 scoops at 1pm in 60 minutes split into 4 parts
+# CAFFEINE = [(13.0, aeropress_scoops_to_caffeine_mg(1.0), 60, 4)]
+CAFFEINE = [(13.0, aeropress_scoops_to_caffeine_mg(1.0), 60)]
+
 # === Time window helpers ===
-def compute_time_window(vyv_schedule, dex_schedule, default_start=8.0):
+def compute_time_window(vyv_schedule, dex_schedule, caffeine_schedule=None, default_start=8.0):
     times = [td for td, _ in (vyv_schedule or [])] + [td for td, _ in (dex_schedule or [])]
+    if caffeine_schedule:
+        for item in caffeine_schedule:
+            if isinstance(item, (list, tuple)) and len(item) >= 1:
+                times.append(float(item[0]))
     if times:
         first = min(times)
         start = float(math.floor(first))
@@ -254,6 +274,30 @@ def plot_overlay(t, vyv_sum, vyv_pk_curves, dex_pk_curves, total_pk, PD, t_start
         sapd_line, = ax.plot(t, masked_from(branch_time, stop_pd), linestyle=":", linewidth=1.0, color=col, alpha=0.9, label=f"Stop after Dex {i+1} (perceived)")
         stop_after_lines_pairs.append((sapk_line, sapd_line))
 
+    # Caffeine PK (separate right-hand y-axis; does not add to amphetamine totals)
+    caffeine_total = None
+    caffeine_line = None
+    ax_caf = None
+    if 'CAFFEINE' in globals() and CAFFEINE:
+        caffeine_total = caffeine_total_curve(t, CAFFEINE)
+        if caffeine_total is not None:
+            ax_caf = ax.twinx()
+            # De-emphasized but readable styling for caffeine scale/line
+            caffeine_color = '#555555'
+            caffeine_line, = ax_caf.plot(t, caffeine_total, linewidth=1.9, linestyle='-', color=caffeine_color, alpha=0.75, label='Caffeine (PK)')
+            # Configure caffeine axis on the LEFT (offset outward) alongside amphetamine scale
+            caf_ymax = float(np.nanmax(caffeine_total)) if np.isfinite(np.nanmax(caffeine_total)) else 1.0
+            ax_caf.set_ylim(0, np.ceil(caf_ymax * 1.1))
+            # Hide right spine/ticks; show left spine offset outward to avoid overlap
+            ax_caf.spines['right'].set_visible(False)
+            ax_caf.spines['left'].set_visible(True)
+            ax_caf.spines['left'].set_position(('outward', 42))
+            ax_caf.spines['left'].set_color('#aaaaaa')
+            ax_caf.yaxis.set_label_position('left')
+            ax_caf.yaxis.tick_left()
+            ax_caf.set_ylabel('Caffeine (mg, model)', color=caffeine_color)
+            ax_caf.tick_params(axis='y', colors='#888888', labelsize=9)
+
     # Mark dose times (verticals matching dose colors)
     for td, _ in VYVANSE:
         ax.axvline(td, linestyle="--", linewidth=1.0, alpha=0.52, color=vyv_pk_color)
@@ -269,12 +313,15 @@ def plot_overlay(t, vyv_sum, vyv_pk_curves, dex_pk_curves, total_pk, PD, t_start
         f"Vyvanse + Dex — PK (solid) vs perceived (dotted) | τr={PD.get('dex_tau_r',0.5)}h, τd={PD.get('dex_tau_d',3.0)}h, peak≈{PD.get('pd_peak_scale',1.0)}×PK, clamp≤{PD.get('pd_max_scale',1.1)}×PK"
     )
     ax.set_xlabel("Hour of Day")
-    ax.set_ylabel("Relative Units (a.u.)")
+    ax.set_ylabel("Amphetamine (PK/Perceived; a.u.)")
     ymax = float(np.nanmax(total_pk))
     ax.set_ylim(0, np.ceil(ymax * 1.1))
     ax.set_xlim(t_start, t_end)
-    # Legend ordering: pair totals and Vyvanse; group Dex PK then Dex perceived; stop-after pairs at the end
-    handles = [total_pk_line, total_pd_line]
+    # Legend ordering: caffeine first, then amphetamine totals; then Vyvanse pair, Dex PK then Dex perceived; stop-after pairs at end
+    handles = []
+    if caffeine_line is not None:
+        handles.append(caffeine_line)
+    handles += [total_pk_line, total_pd_line]
     if vyv_pk_line is not None:
         handles.append(vyv_pk_line)
         if vyv_pd_line is not None:
@@ -288,7 +335,7 @@ def plot_overlay(t, vyv_sum, vyv_pk_curves, dex_pk_curves, total_pk, PD, t_start
 
 # === Entrypoint ===
 def run(save_fig=None):
-    t_start, t_end = compute_time_window(VYVANSE, DEX)
+    t_start, t_end = compute_time_window(VYVANSE, DEX, CAFFEINE)
     t = np.linspace(t_start, t_end, int((t_end - t_start) * 60 / RES_MIN) + 1)
     vyv_sum, vyv_pk_curves, dex_pk_curves, total_pk = build_pk(t)
     fig = plot_overlay(t, vyv_sum, vyv_pk_curves, dex_pk_curves, total_pk, default_PD, t_start, t_end)

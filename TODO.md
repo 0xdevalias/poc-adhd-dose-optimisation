@@ -39,6 +39,20 @@
   - Document new CLI flags for the kernel script with 2–3 copy‑paste examples.
   - Ensure default SVG filenames are listed for all scripts.
 
+- Caffeine modeling follow-ups
+  - Units/labeling:
+    - Currently caffeine y-axis is “mg, model” (amount-like signal proportional to ingested mg; not concentration).
+    - Optionally convert caffeine to a rough concentration (mg/L) by dividing the model amount by an assumed apparent volume of distribution (Vd). Examples:
+      - Vd per kg × body mass (e.g., 0.6–0.7 L/kg → 42–49 L for 70 kg), then amount/Vd → mg/L.
+      - Include/assume bioavailability F (often near 1.0 for caffeine) if adding an absorption factor.
+    - If implemented, add axis label toggle and brief README note about assumptions and uncertainty.
+  - CLI exposure (optional later):
+    - `--caf-vd-liters FLOAT` or `--caf-vd-lkg FLOAT` + `--body-mass-kg FLOAT` to compute mg/L.
+    - `--caf-ka FLOAT`, `--caf-ke FLOAT` to experiment with absorption/elimination.
+  - Additional views:
+    - Optional ingestion view: cumulative caffeine ingested over time or ingestion rate (mg/h) for sipped drinks.
+    - Optional overlay of “felt caffeine” (perceived) via a separate PD kernel if useful, kept clearly separate from amphetamine curves.
+
 - Output filename templating
   - Add an optional filename template mode for SVG exports without replacing the current default filenames.
   - Allow a template via a new flag (e.g., `--filename-template` or `--save-fig-template`) that can be used alongside `--save-fig`.
