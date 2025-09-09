@@ -142,8 +142,12 @@ for i in range(max(0, len(dex_curves) - 1)):
 # Dex-only total (solid)
 dex_total_line, = ax.plot(t, total_dex_only_plot, linewidth=2.8, linestyle="-", color=COLORS["total_pk"], label="Total (Dex-only model)")
 
-# Dose markers for Dex-only (match line colors)
+# Dose markers for Dex-only (match line colors) — skip first Dex dose of the day
+_EPS = 1e-6
+first_dex_time = min(t_dex) if t_dex else None
 for td, line in zip(t_dex, dex_lines):
+    if first_dex_time is not None and abs(td - first_dex_time) < _EPS:
+        continue
     ax.axvline(td, linestyle="--", linewidth=1.0, alpha=0.52, color=line.get_color())
 
 # Hourly grid & ticks (start → start next day)

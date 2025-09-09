@@ -298,10 +298,17 @@ def plot_overlay(t, vyv_sum, vyv_pk_curves, dex_pk_curves, total_pk, PD, t_start
             ax_caf.set_ylabel('Caffeine (mg, model)', color=caffeine_color)
             ax_caf.tick_params(axis='y', colors='#888888', labelsize=9)
 
-    # Mark dose times (verticals matching dose colors)
+    # Mark dose times (verticals matching dose colors) — skip first dose(s) of the day
+    _EPS = 1e-6
+    all_dose_times = [td for td, _ in (VYVANSE or [])] + [td for td, _ in (DEX or [])]
+    first_time_global = min(all_dose_times) if all_dose_times else None
     for td, _ in VYVANSE:
+        if first_time_global is not None and abs(td - first_time_global) < _EPS:
+            continue
         ax.axvline(td, linestyle="--", linewidth=1.0, alpha=0.52, color=vyv_pk_color)
     for i, (td, _) in enumerate(DEX):
+        if first_time_global is not None and abs(td - first_time_global) < _EPS:
+            continue
         col = dex_pk_colors[i] if i < len(dex_pk_colors) else COLORS['neutral_marker']
         ax.axvline(td, linestyle="--", linewidth=1.0, alpha=0.52, color=col)
 

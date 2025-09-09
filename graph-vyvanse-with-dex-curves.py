@@ -139,8 +139,12 @@ for i, (curve, lab) in enumerate(zip(ref_dex_curves, labels)):
     line, = ax.plot(t, curve, linestyle="--", linewidth=1.8, color=col, label=f"{lab} ({'perceived' if 'Perceived' in dex_mode_label else 'PK'})")
     dex_lines.append(line)
 
-# Dose markers (Dex only; match line colors)
+# Dose markers (Dex only; match line colors). Skip first dose(s) of the day.
+_EPS = 1e-6
+global_first_time = min(all_times) if all_times else None
 for td, line in zip(t_ref_dex, dex_lines):
+    if global_first_time is not None and abs(td - global_first_time) < _EPS:
+        continue
     ax.axvline(td, linestyle="--", linewidth=1.0, alpha=0.52, color=line.get_color())
 
 # Hourly grid & ticks (start → start next day)
