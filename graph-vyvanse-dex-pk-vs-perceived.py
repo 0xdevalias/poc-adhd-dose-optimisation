@@ -193,6 +193,7 @@ def plot_overlay(t, vyv_sum, vyv_pk_curves, dex_pk_curves, total_pk, PD, t_start
     total_pk_line, = ax.plot(t, total_pk_plot, linewidth=2.6, color=COLORS['total_pk'], label="Total (PK)")
     total_pk_color = total_pk_line.get_color()
     # Only plot Vyvanse PK if scheduled, and hide pre-dose baseline
+    vyv_pk_line = None
     if VYVANSE:
         vyv_first = min(td for td, _ in VYVANSE)
         vyv_sum_plot = mask_before(vyv_first, vyv_sum)
@@ -203,10 +204,11 @@ def plot_overlay(t, vyv_sum, vyv_pk_curves, dex_pk_curves, total_pk, PD, t_start
     # Build effective Dex colors that avoid Total/Vyvanse colors
     reserved = {total_pk_color, vyv_pk_color}
     dex_colors = [c for c in DEX_BASE_COLORS if c not in reserved] or DEX_BASE_COLORS[:]
-    dex_pk_colors = []
+    dex_pk_colors, dex_pk_lines = [], []
     for i, ((td, d), curve) in enumerate(zip(DEX, dex_pk_curves)):
         col = dex_colors[i % len(dex_colors)]
         pk_line, = ax.plot(t, curve, linestyle="--", linewidth=1.5, color=col, label=f"Dex {d}mg @ {label_hour(td)} (PK)")
+        dex_pk_lines.append(pk_line)
         dex_pk_colors.append(pk_line.get_color())
 
     # Perceived (PD) curves (dotted) — component-wise using kernel
@@ -234,12 +236,15 @@ def plot_overlay(t, vyv_sum, vyv_pk_curves, dex_pk_curves, total_pk, PD, t_start
     # Perceived component curves are plotted fully; no special masking is applied beyond the floor.
     # Mask perceived totals before first dose to avoid a zero baseline
     total_pd_plot = mask_before(first_time, total_pd_m)
-    ax.plot(t, total_pd_plot, linewidth=2.6, linestyle=":", color=total_pk_color, alpha=0.9, label="Total (perceived)")
+    total_pd_line, = ax.plot(t, total_pd_plot, linewidth=2.6, linestyle=":", color=total_pk_color, alpha=0.9, label="Total (perceived)")
+    vyv_pd_line = None
     if VYVANSE:
-        ax.plot(t, vyv_pd_m, linewidth=2.0, linestyle=":", color=vyv_pk_color, alpha=0.85, label="Vyvanse (perceived)")
+        vyv_pd_line, = ax.plot(t, vyv_pd_m, linewidth=2.0, linestyle=":", color=vyv_pk_color, alpha=0.85, label="Vyvanse (perceived)")
+    dex_pd_lines = []
     for i, ((td, d), curve) in enumerate(zip(DEX, dex_pd_components_m)):
         col = dex_pk_colors[i] if i < len(dex_pk_colors) else (dex_colors[i % len(dex_colors)])
-        ax.plot(t, curve, linestyle=":", linewidth=1.5, alpha=0.8, color=col, label=f"Dex {d}mg @ {label_hour(td)} (perceived)")
+        pd_line, = ax.plot(t, curve, linestyle=":", linewidth=1.5, alpha=0.8, color=col, label=f"Dex {d}mg @ {label_hour(td)} (perceived)")
+        dex_pd_lines.append(pd_line)
 
     # Stop-after projections
     def masked_from(time0, curve):
@@ -248,14 +253,16 @@ def plot_overlay(t, vyv_sum, vyv_pk_curves, dex_pk_curves, total_pk, PD, t_start
         return m
 
     # Do not render the last stop-after branch; it matches the final total
+    stop_after_lines_pairs = []
     for i in range(max(0, len(DEX) - 1)):
         stop_pk = vyv_sum + sum(np.nan_to_num(c) for c in dex_pk_curves[:i+1])
         # PD branch: sum PD components up to i (plus Vyvanse PD)
         stop_pd = vyv_pd + np.nansum(np.vstack(dex_pd_components[:i+1]), axis=0)
         branch_time = DEX[i+1][0]
         col = dex_pk_colors[i] if i < len(dex_pk_colors) else (dex_colors[i % len(dex_colors)])
-        ax.plot(t, masked_from(branch_time, stop_pk), linestyle="--", linewidth=1.0, color=col, alpha=0.6, label=f"Stop after Dex {i+1} (PK)")
-        ax.plot(t, masked_from(branch_time, stop_pd), linestyle=":", linewidth=1.0, color=col, alpha=0.9, label=f"Stop after Dex {i+1} (PD)")
+        sapk_line, = ax.plot(t, masked_from(branch_time, stop_pk), linestyle="--", linewidth=1.0, color=col, alpha=0.6, label=f"Stop after Dex {i+1} (PK)")
+        sapd_line, = ax.plot(t, masked_from(branch_time, stop_pd), linestyle=":", linewidth=1.0, color=col, alpha=0.9, label=f"Stop after Dex {i+1} (PD)")
+        stop_after_lines_pairs.append((sapk_line, sapd_line))
 
     # Mark dose times (verticals matching dose colors)
     for td, _ in VYVANSE:
@@ -276,7 +283,16 @@ def plot_overlay(t, vyv_sum, vyv_pk_curves, dex_pk_curves, total_pk, PD, t_start
     ymax = float(np.nanmax(total_pk))
     ax.set_ylim(0, np.ceil(ymax * 1.1))
     ax.set_xlim(t_start, t_end)
-    ax.legend(fontsize=8, ncol=2)
+    # Legend ordering: pair totals and Vyvanse; group Dex PK then Dex perceived; stop-after pairs at the end
+    handles = [total_pk_line, total_pd_line]
+    if vyv_pk_line is not None:
+        handles.append(vyv_pk_line)
+        if vyv_pd_line is not None:
+            handles.append(vyv_pd_line)
+    handles += dex_pk_lines + dex_pd_lines
+    for sapk, sapd in stop_after_lines_pairs:
+        handles += [sapk, sapd]
+    ax.legend(handles=handles, labels=[h.get_label() for h in handles], fontsize=8, ncol=2)
     fig.tight_layout()
     return fig
 
