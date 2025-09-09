@@ -22,18 +22,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import math
 from utils.save_utils import save_figure_safely
-
-# === Core math helpers ===
-def bateman(t, dose, t0, ka, ke):
-    """One-compartment Bateman function for an oral dose."""
-    c = np.zeros_like(t)
-    m = t >= t0
-    tm = t[m] - t0
-    if abs(ka - ke) < 1e-9:
-        ka += 1e-6
-    c[m] = dose * (ka / (ka - ke)) * (np.exp(-ke * tm) - np.exp(-ka * tm))
-    c[c < 0] = 0
-    return c
+from utils.pk_models import bateman
 
 def curves_from_schedule(t, schedule, ka, ke):
     """Generate a curve for each (time,dose) in the schedule."""
