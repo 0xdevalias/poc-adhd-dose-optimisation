@@ -20,6 +20,7 @@ Usage:
 import argparse
 import numpy as np
 import matplotlib.pyplot as plt
+import math
 
 # === Core math helpers ===
 def bateman(t, dose, t0, ka, ke):
@@ -52,7 +53,7 @@ def label_hour(h):
 # === Perceived-effect kernel ===
 
 # === Global defaults ===
-T_START, T_END, RES_MIN = 8.0, 32.0, 1
+RES_MIN = 1  # minutes per sample
 KA_VYV, KA_DEX = 0.80, 1.00
 KE_AMP = np.log(2) / 11.0
 DEFAULT_SVG = "graph-vyvanse-dex-pk-vs-perceived.svg"
@@ -75,6 +76,17 @@ def vyvanse_cap_to_dex_eq(mg_capsule: float) -> float:
 # Example dosing schedule 
 VYVANSE = [(8.0, vyvanse_cap_to_dex_eq(30.0))]
 DEX = [(8.0, 5.0), (11.0, 5.0), (13.0, 5.0)]  # Dex 5mg at 8am, 11am, 1pm
+
+# === Time window helpers ===
+def compute_time_window(vyv_schedule, dex_schedule, default_start=8.0):
+    times = [td for td, _ in (vyv_schedule or [])] + [td for td, _ in (dex_schedule or [])]
+    if times:
+        first = min(times)
+        start = float(math.floor(first))
+    else:
+        start = float(default_start)
+    end = start + 24.0
+    return start, end
 
 # Perceived-effect (PD) parameters
 default_PD = dict(
@@ -160,7 +172,7 @@ def apply_pd_kernel(curve, dt_h, tau_r, tau_d, gain=1.0, match='peak', peak_scal
     return y
 
 # === Plotting ===
-def plot_overlay(t, vyv_sum, vyv_pk_curves, dex_pk_curves, total_pk, PD):
+def plot_overlay(t, vyv_sum, vyv_pk_curves, dex_pk_curves, total_pk, PD, t_start, t_end):
     fig, ax = plt.subplots(figsize=(13, 7))
     # Colors come from centralized DEX_BASE_COLORS / COLORS
 
@@ -231,8 +243,8 @@ def plot_overlay(t, vyv_sum, vyv_pk_curves, dex_pk_curves, total_pk, PD):
         ax.axvline(td, linestyle=":", linewidth=1.2, alpha=0.6, color=col, zorder=4)
 
     # Axes/labels
-    ax.set_xticks(range(int(T_START), int(T_END) + 1))
-    ax.set_xticklabels([label_hour(h) for h in range(int(T_START), int(T_END) + 1)])
+    ax.set_xticks(range(int(t_start), int(t_end) + 1))
+    ax.set_xticklabels([label_hour(h) for h in range(int(t_start), int(t_end) + 1)])
     ax.grid(True, alpha=0.3, linestyle="--")
     ax.set_title(
         f"Vyvanse + Dex — PK (solid) vs perceived (dotted) | τr={PD.get('dex_tau_r',0.5)}h, τd={PD.get('dex_tau_d',3.0)}h, peak≈{PD.get('pd_peak_scale',1.0)}×PK, clamp≤{PD.get('pd_max_scale',1.1)}×PK"
@@ -241,16 +253,17 @@ def plot_overlay(t, vyv_sum, vyv_pk_curves, dex_pk_curves, total_pk, PD):
     ax.set_ylabel("Relative Units (a.u.)")
     ymax = float(np.nanmax(total_pk))
     ax.set_ylim(0, np.ceil(ymax * 1.1))
-    ax.set_xlim(T_START, T_END)
+    ax.set_xlim(t_start, t_end)
     ax.legend(fontsize=8, ncol=2)
     fig.tight_layout()
     return fig
 
 # === Entrypoint ===
 def run(save_svg=None):
-    t = np.linspace(T_START, T_END, int((T_END - T_START) * 60 / RES_MIN) + 1)
+    t_start, t_end = compute_time_window(VYVANSE, DEX)
+    t = np.linspace(t_start, t_end, int((t_end - t_start) * 60 / RES_MIN) + 1)
     vyv_sum, vyv_pk_curves, dex_pk_curves, total_pk = build_pk(t)
-    fig = plot_overlay(t, vyv_sum, vyv_pk_curves, dex_pk_curves, total_pk, default_PD)
+    fig = plot_overlay(t, vyv_sum, vyv_pk_curves, dex_pk_curves, total_pk, default_PD, t_start, t_end)
     if save_svg:
         path = save_svg if save_svg != "default" else DEFAULT_SVG
         fig.savefig(path, format="svg", bbox_inches="tight")

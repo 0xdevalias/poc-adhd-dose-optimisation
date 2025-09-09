@@ -3,6 +3,7 @@
 import argparse
 import numpy as np
 import matplotlib.pyplot as plt
+import math
 
 # === Helpers ===
 def bateman(t, dose, t0, ka, ke):
@@ -32,9 +33,6 @@ def label_hour(h):
         h12 = 12
     return f"{h12}{suffix}"
 
-# === Time axis: full 24h from 08:00 today to 08:00 next day ===
-t = np.linspace(8, 32, 24*60+1)  # 1-min resolution
-
 # === Pharmacokinetics ===
 # (t½ = half-life)
 
@@ -60,15 +58,26 @@ vyv_doses_mg   = [12.0]                # Vyvanse equivalent d-amphetamine (mg)
 t_ref_dex      = [8.0, 11.0, 13.0]     # Dex top-up times (h of day)
 ref_dex_mg     = [5.0, 5.0, 5.0]       # Dex top-up doses (mg)
 
+# === Dex-only scenario ===
+t_dex      = [8.0,  9.5, 11.0, 11.75, 13.0]   # Dex dose times (h of day)
+dex_mg     = [15.0, 5.0,  7.5,  2.5,   7.5]   # Dex dose amounts (mg)
+
+# === Dynamic 24h window based on earliest dose across all plotted schedules ===
+all_times = []
+all_times += list(t_vyv or [])
+all_times += list(t_ref_dex or [])
+all_times += list(t_dex or [])
+if all_times:
+    start_h = float(math.floor(min(all_times)))
+else:
+    start_h = 8.0
+end_h = start_h + 24.0
+t = np.linspace(start_h, end_h, int((end_h - start_h) * 60) + 1)  # 1-min resolution
 vyv_curves_ref = curves_from_schedule(t_vyv,     vyv_doses_mg, ka_vyv, ke_vyv)
 ref_dex_curves = curves_from_schedule(t_ref_dex, ref_dex_mg,   ka_ir,  ke_ir)
 
 vyv_curve_ref  = sum(np.nan_to_num(v) for v in vyv_curves_ref)
 total_ref      = vyv_curve_ref + sum(np.nan_to_num(c) for c in ref_dex_curves)
-
-# === Dex-only scenario ===
-t_dex      = [8.0,  9.5, 11.0, 11.75, 13.0]   # Dex dose times (h of day)
-dex_mg     = [15.0, 5.0,  7.5,  2.5,   7.5]   # Dex dose amounts (mg)
 
 dex_curves       = curves_from_schedule(t_dex, dex_mg, ka_ir, ke_ir)
 total_dex_only   = sum(np.nan_to_num(c) for c in dex_curves)
@@ -97,8 +106,8 @@ plt.plot(t, total_dex_only, linewidth=2.8, linestyle="-", label="Total (Dex-only
 for td, line in zip(t_dex, dex_lines):
     plt.axvline(td, linestyle="--", linewidth=1.0, alpha=0.52, color=line.get_color())
 
-# Hourly grid & ticks (8am → 8am next day)
-xticks = list(range(8, 33, 1))
+# Hourly grid & ticks (start → start next day)
+xticks = list(range(int(start_h), int(end_h) + 1, 1))
 plt.xticks(xticks, [label_hour(h) for h in xticks], rotation=0)
 plt.grid(True, which="both", axis="both", alpha=0.33, linestyle="--", linewidth=0.7)
 
@@ -106,7 +115,7 @@ plt.title(f"Dex-only Model vs Vyvanse+Dex Reference\nDex IR: {dex_mode_label}")
 plt.xlabel("Hour of Day")
 plt.ylabel("Relative Effect (arbitrary units)")
 plt.ylim(0, y_top)
-plt.xlim(8, 32)
+plt.xlim(start_h, end_h)
 plt.legend(ncol=2, fontsize=9)
 plt.tight_layout()
 
