@@ -258,10 +258,10 @@ def plot_overlay(t, vyv_sum, vyv_pk_curves, dex_pk_curves, total_pk, PD, t_start
 
     # Mark dose times (verticals matching dose colors)
     for td, _ in VYVANSE:
-        ax.axvline(td, linestyle=":", linewidth=1.2, alpha=0.6, color=vyv_pk_color, zorder=4)
+        ax.axvline(td, linestyle="--", linewidth=1.0, alpha=0.52, color=vyv_pk_color)
     for i, (td, _) in enumerate(DEX):
         col = dex_pk_colors[i] if i < len(dex_pk_colors) else COLORS['neutral_marker']
-        ax.axvline(td, linestyle=":", linewidth=1.2, alpha=0.6, color=col, zorder=4)
+        ax.axvline(td, linestyle="--", linewidth=1.0, alpha=0.52, color=col)
 
     # Axes/labels
     ax.set_xticks(range(int(t_start), int(t_end) + 1))
