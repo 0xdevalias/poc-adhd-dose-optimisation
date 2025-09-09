@@ -116,17 +116,17 @@ ymax = max(np.max(total_dex_only), np.max(total_ref))
 y_top = np.ceil(ymax * 1.08)  # 8% headroom, rounded up
 
 # === Plot ===
-fig = plt.figure(figsize=(13, 7))
+fig, ax = plt.subplots(figsize=(13, 7))
 
 # Reference total (dotted)
-ref_total_line, = plt.plot(t, total_ref_plot, linewidth=2.4, linestyle=":", color=COLORS["total_pk"], label="Total (Vyvanse + Dex reference)")
+ref_total_line, = ax.plot(t, total_ref_plot, linewidth=2.4, linestyle=":", color=COLORS["total_pk"], label="Total (Vyvanse + Dex reference)")
 
 # Dex-only components (dashed)
 labels = [f"Dex-only {dose:g}mg @ {label_hour(td)}" for td, dose in zip(t_dex, dex_mg)]
 dex_lines = []
 for i, (curve, lab) in enumerate(zip(dex_curves, labels)):
     col = DEX_BASE_COLORS[i % len(DEX_BASE_COLORS)]
-    line, = plt.plot(t, curve, linestyle="--", linewidth=1.6, color=col, label=lab)
+    line, = ax.plot(t, curve, linestyle="--", linewidth=1.6, color=col, label=lab)
     dex_lines.append(line)
 
 # Stop-after projections (dotted, behind totals) — one per Dex dose except last
@@ -139,7 +139,7 @@ for i in range(max(0, len(dex_curves) - 1)):
     included_time = t_dex[i]
     partial = sum(np.nan_to_num(c) for c in dex_curves[: i + 1])
     color = dex_lines[i].get_color() if i < len(dex_lines) else None
-    line, = plt.plot(
+    line, = ax.plot(
         t,
         mask_from(branch_time, partial),
         linestyle=":",
@@ -151,26 +151,27 @@ for i in range(max(0, len(dex_curves) - 1)):
     stop_after_lines.append(line)
 
 # Dex-only total (solid)
-dex_total_line, = plt.plot(t, total_dex_only_plot, linewidth=2.8, linestyle="-", color=COLORS["total_pk"], label="Total (Dex-only model)")
+dex_total_line, = ax.plot(t, total_dex_only_plot, linewidth=2.8, linestyle="-", color=COLORS["total_pk"], label="Total (Dex-only model)")
 
 # Dose markers for Dex-only (match line colors)
 for td, line in zip(t_dex, dex_lines):
-    plt.axvline(td, linestyle="--", linewidth=1.0, alpha=0.52, color=line.get_color())
+    ax.axvline(td, linestyle="--", linewidth=1.0, alpha=0.52, color=line.get_color())
 
 # Hourly grid & ticks (start → start next day)
 xticks = list(range(int(start_h), int(end_h) + 1, 1))
-plt.xticks(xticks, [label_hour(h) for h in xticks], rotation=0)
-plt.grid(True, which="both", axis="both", alpha=0.33, linestyle="--", linewidth=0.7)
+ax.set_xticks(xticks)
+ax.set_xticklabels([label_hour(h) for h in xticks], rotation=0)
+ax.grid(True, which="both", axis="both", alpha=0.33, linestyle="--", linewidth=0.7)
 
-plt.title(f"Dex-only Model vs Vyvanse+Dex Reference\nDex IR: {dex_mode_label}")
-plt.xlabel("Hour of Day")
-plt.ylabel("Relative Effect (arbitrary units)")
-plt.ylim(0, y_top)
-plt.xlim(start_h, end_h)
+ax.set_title(f"Dex-only Model vs Vyvanse+Dex Reference\nDex IR: {dex_mode_label}")
+ax.set_xlabel("Hour of Day")
+ax.set_ylabel("Relative Effect (arbitrary units)")
+ax.set_ylim(0, y_top)
+ax.set_xlim(start_h, end_h)
 # Legend ordering: place stop-after entries at end of legend
 handles = [ref_total_line, dex_total_line] + dex_lines + stop_after_lines
-plt.legend(handles=handles, labels=[h.get_label() for h in handles], ncol=2, fontsize=9)
-plt.tight_layout()
+ax.legend(handles=handles, labels=[h.get_label() for h in handles], ncol=2, fontsize=9)
+fig.tight_layout()
 
 # Optional: save the chart to a file (format inferred from extension)
 parser = argparse.ArgumentParser(add_help=False)
