@@ -92,6 +92,12 @@ first_time = min(all_times) if all_times else None
 total_ref_plot = mask_before(first_time, total_ref) if first_time is not None else total_ref
 total_dex_only_plot = mask_before(first_time, total_dex_only) if first_time is not None else total_dex_only
 
+# Helper to mask a curve so it only shows from a given time onwards
+def mask_from(time0, curve):
+    m = curve.copy()
+    m[t < time0] = np.nan
+    return m
+
 # === Dynamic y-limit for full visibility with a little headroom ===
 ymax = max(np.max(total_dex_only), np.max(total_ref))
 y_top = np.ceil(ymax * 1.08)  # 8% headroom, rounded up
@@ -100,7 +106,7 @@ y_top = np.ceil(ymax * 1.08)  # 8% headroom, rounded up
 plt.figure(figsize=(13, 7))
 
 # Reference total (dotted)
-plt.plot(t, total_ref_plot, linewidth=2.4, linestyle=":", label="Total (Vyvanse + Dex reference)")
+ref_total_line, = plt.plot(t, total_ref_plot, linewidth=2.4, linestyle=":", label="Total (Vyvanse + Dex reference)")
 
 # Dex-only components (dashed)
 labels = [f"Dex-only {dose:g}mg @ {label_hour(td)}" for td, dose in zip(t_dex, dex_mg)]
@@ -109,8 +115,29 @@ for curve, lab in zip(dex_curves, labels):
     line, = plt.plot(t, curve, linestyle="--", linewidth=1.6, label=lab)
     dex_lines.append(line)
 
+# Stop-after projections (dotted, behind totals) — one per Dex dose except last
+# Skip the first branch in Dex-only, as it duplicates the first-dose curve.
+stop_after_lines = []
+for i in range(max(0, len(dex_curves) - 1)):
+    if i == 0:
+        continue
+    branch_time = t_dex[i + 1]
+    included_time = t_dex[i]
+    partial = sum(np.nan_to_num(c) for c in dex_curves[: i + 1])
+    color = dex_lines[i].get_color() if i < len(dex_lines) else None
+    line, = plt.plot(
+        t,
+        mask_from(branch_time, partial),
+        linestyle=":",
+        linewidth=1.4,
+        alpha=0.85,
+        color=color,
+        label=f"Stop after {label_hour(included_time)} Dex"
+    )
+    stop_after_lines.append(line)
+
 # Dex-only total (solid)
-plt.plot(t, total_dex_only_plot, linewidth=2.8, linestyle="-", label="Total (Dex-only model)")
+dex_total_line, = plt.plot(t, total_dex_only_plot, linewidth=2.8, linestyle="-", label="Total (Dex-only model)")
 
 # Dose markers for Dex-only (match line colors)
 for td, line in zip(t_dex, dex_lines):
@@ -126,7 +153,9 @@ plt.xlabel("Hour of Day")
 plt.ylabel("Relative Effect (arbitrary units)")
 plt.ylim(0, y_top)
 plt.xlim(start_h, end_h)
-plt.legend(ncol=2, fontsize=9)
+# Legend ordering: place stop-after entries at end of legend
+handles = [ref_total_line, dex_total_line] + dex_lines + stop_after_lines
+plt.legend(handles=handles, labels=[h.get_label() for h in handles], ncol=2, fontsize=9)
 plt.tight_layout()
 
 # Optional: save an SVG of the chart

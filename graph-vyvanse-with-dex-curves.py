@@ -75,8 +75,15 @@ vyv_curve_ref  = sum(np.nan_to_num(v) for v in vyv_curves_ref)
 total_ref      = vyv_curve_ref + sum(np.nan_to_num(c) for c in ref_dex_curves)
 
 # Stop-after projections (drawn behind, color-matched to dose)
-total_stop_after_dex1 = vyv_curve_ref + np.nan_to_num(ref_dex_curves[0])
-total_stop_after_dex2 = vyv_curve_ref + np.nan_to_num(ref_dex_curves[0]) + np.nan_to_num(ref_dex_curves[1])
+# Dynamically generate a branch for each Dex dose except the last
+# (i.e., show the trajectory if no further Dex doses are taken after that point).
+stop_after_totals = []  # list of (branch_index, included_time, branch_time, total_curve)
+if ref_dex_curves:
+    for i in range(max(0, len(ref_dex_curves) - 1)):
+        partial = vyv_curve_ref + sum(np.nan_to_num(c) for c in ref_dex_curves[: i + 1])
+        included_time = t_ref_dex[i]     # time of the included dose (we stop after this)
+        branch_time = t_ref_dex[i + 1]   # time where the next dose would have occurred
+        stop_after_totals.append((i, included_time, branch_time, partial))
 
 # Mask helper to hide pre-dose zero baselines for plotted totals
 def mask_before(time0, curve):
@@ -86,9 +93,13 @@ def mask_before(time0, curve):
 
 first_time = min(all_times) if all_times else None
 total_ref_plot = mask_before(first_time, total_ref) if first_time is not None else total_ref
-total_stop_after_dex1_plot = mask_before(first_time, total_stop_after_dex1) if first_time is not None else total_stop_after_dex1
-total_stop_after_dex2_plot = mask_before(first_time, total_stop_after_dex2) if first_time is not None else total_stop_after_dex2
 vyv_curve_ref_plot = mask_before(min(t_vyv), vyv_curve_ref) if (t_vyv and len(t_vyv) > 0) else vyv_curve_ref
+
+# Helper to mask a curve so it only shows from a given time onwards
+def mask_from(time0, curve):
+    m = curve.copy()
+    m[t < time0] = np.nan
+    return m
 
 # === Dynamic y-limit for full visibility with a little headroom ===
 ymax = np.max(total_ref)
@@ -97,17 +108,30 @@ y_top = np.ceil(ymax * 1.08)  # 8% headroom, rounded up
 # === Plot ===
 plt.figure(figsize=(13, 7))
 
-# Projections first (so total overlays overlaps)
-plt.plot(t, total_stop_after_dex1_plot, linestyle=":", linewidth=1.8, color="tab:purple", alpha=0.85, label="Stop after 08:00 Dex")
-plt.plot(t, total_stop_after_dex2_plot, linestyle=":", linewidth=1.8, color="tab:green",  alpha=0.85, label="Stop after 11:00 Dex")
+# Choose per-dose colors (also used for stop-after branches)
+colors = ["tab:purple", "tab:green", "gold", "tab:red", "tab:brown", "tab:pink", "tab:olive", "tab:cyan"]
+
+# Projections first (so total overlays overlaps). Color-match by dose index.
+stop_after_lines = []
+for i, included_time, branch_time, curve in stop_after_totals:
+    col = colors[i % len(colors)]
+    line, = plt.plot(
+        t,
+        mask_from(branch_time, curve),
+        linestyle=":",
+        linewidth=1.6,
+        color=col,
+        alpha=0.85,
+        label=f"Stop after {label_hour(included_time)} Dex"
+    )
+    stop_after_lines.append(line)
 
 # Reference total (solid)
-plt.plot(t, total_ref_plot,  linewidth=2.6, color="tab:blue", label="Total (Vyvanse + Dex)")
+total_line, = plt.plot(t, total_ref_plot,  linewidth=2.6, color="tab:blue", label="Total (Vyvanse + Dex)")
 
 # Base components (dashed)
-plt.plot(t, vyv_curve_ref_plot,  linewidth=2.0, color="orange", label="Vyvanse 30mg → dex (eq. 12mg) [Tmax≈3.5–4h]")
+vyv_line, = plt.plot(t, vyv_curve_ref_plot,  linewidth=2.0, color="orange", label="Vyvanse 30mg → dex (eq. 12mg) [Tmax≈3.5–4h]")
 labels = [f"Dex IR {dose:g}mg @ {label_hour(td)}" for td, dose in zip(t_ref_dex, ref_dex_mg)]
-colors = ["tab:purple", "tab:green", "gold"]
 dex_lines = []
 for curve, lab, col in zip(ref_dex_curves, labels, colors):
     line, = plt.plot(t, curve, linestyle="--", linewidth=1.8, color=col, label=f"{lab} ({'perceived' if 'Perceived' in dex_mode_label else 'PK'})")
@@ -127,7 +151,9 @@ plt.xlabel("Hour of Day")
 plt.ylabel("Relative Effect (arbitrary units)")
 plt.ylim(0, y_top)
 plt.xlim(start_h, end_h)
-plt.legend(ncol=2, fontsize=9)
+# Legend ordering: place stop-after entries at end of legend
+handles = [total_line, vyv_line] + dex_lines + stop_after_lines
+plt.legend(handles=handles, labels=[h.get_label() for h in handles], ncol=2, fontsize=9)
 plt.tight_layout()
 
 # Optional: save an SVG of the chart
