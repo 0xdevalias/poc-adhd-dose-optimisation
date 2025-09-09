@@ -23,23 +23,10 @@ import matplotlib.pyplot as plt
 import math
 from utils.save_utils import save_figure_safely
 from utils.dosing_utils import shots_to_caffeine_mg, aeropress_scoops_to_caffeine_mg, grams_to_caffeine_mg
-from utils.pk_models import bateman, caffeine_total_curve
+from utils.pk_models import bateman, caffeine_total_curve, curves_from_schedule
+from utils.plot_utils import label_hour
 
-def curves_from_schedule(t, schedule, ka, ke):
-    """Generate a curve for each (time,dose) in the schedule."""
-    curves = [bateman(t, d, td, ka, ke) for td, d in schedule]
-    for curve, (td, _) in zip(curves, schedule):
-        curve[t < td] = np.nan
-    return curves
-
-def label_hour(h):
-    """Format a decimal hour as a human-readable 12h clock label."""
-    h24 = int(h % 24)
-    suffix = "am" if h24 < 12 else "pm"
-    h12 = h24 % 12
-    if h12 == 0:
-        h12 = 12
-    return f"{h12}{suffix}"
+ 
 
 # === Perceived-effect kernel ===
 

@@ -5,23 +5,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 import math
 from utils.save_utils import save_figure_safely
-from utils.pk_models import bateman
+from utils.pk_models import bateman, curves_from_schedule
+from utils.plot_utils import label_hour
 
-def curves_from_schedule(times, doses, ka, ke):
-    """Return list of Bateman curves (one per (time,dose)) with pre-dose masked."""
-    curves = [bateman(t, d, td, ka, ke) for td, d in zip(times, doses)]
-    for curve, td in zip(curves, times):
-        curve[t < td] = np.nan  # hide pre-dose segment for clarity
-    return curves
-
-def label_hour(h):
-    """Format a decimal hour (0–24+) as a 12-hour label like '8am' or '1pm'."""
-    h24 = int(h % 24)
-    suffix = "am" if h24 < 12 else "pm"
-    h12 = h24 % 12
-    if h12 == 0:
-        h12 = 12
-    return f"{h12}{suffix}"
+def _build_schedule(times, doses):
+    return list(zip(times, doses))
 
 # === Pharmacokinetics ===
 # (t½ = half-life)
@@ -70,8 +58,8 @@ else:
     start_h = 8.0
 end_h = start_h + 24.0
 t = np.linspace(start_h, end_h, int((end_h - start_h) * 60) + 1)  # 1-min resolution
-vyv_curves_ref = curves_from_schedule(t_vyv,     vyv_doses_mg, ka_vyv, ke_vyv)
-ref_dex_curves = curves_from_schedule(t_ref_dex, ref_dex_mg,   ka_ir,  ke_ir)
+vyv_curves_ref = curves_from_schedule(t, _build_schedule(t_vyv, vyv_doses_mg), ka_vyv, ke_vyv)
+ref_dex_curves = curves_from_schedule(t, _build_schedule(t_ref_dex, ref_dex_mg),   ka_ir,  ke_ir)
 
 vyv_curve_ref  = sum(np.nan_to_num(v) for v in vyv_curves_ref)
 total_ref      = vyv_curve_ref + sum(np.nan_to_num(c) for c in ref_dex_curves)

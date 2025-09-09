@@ -19,6 +19,22 @@ def bateman(t: np.ndarray, dose: float, t0: float, ka: float, ke: float) -> np.n
     return c
 
 
+def curves_from_schedule(
+    t: np.ndarray,
+    schedule: Iterable[Tuple[float, float]],
+    ka: float,
+    ke: float,
+) -> List[np.ndarray]:
+    """Return Bateman curves for (time, dose) schedule with pre-dose masked.
+
+    Each element in `schedule` is a (t0, dose) pair.
+    """
+    curves: List[np.ndarray] = [bateman(t, d, td, ka, ke) for td, d in schedule]
+    for curve, (td, _) in zip(curves, schedule):
+        curve[t < td] = np.nan
+    return curves
+
+
 # === Caffeine model (PK) ===
 # Fast absorption vs amphetamine; half-life mid-range ~5 h
 KA_CAF: float = 2.0                 # 1/h, adjust to taste
@@ -80,4 +96,3 @@ def caffeine_total_curve(
     if not curves:
         return None
     return np.nansum(np.vstack([np.nan_to_num(c) for c in curves]), axis=0)
-
