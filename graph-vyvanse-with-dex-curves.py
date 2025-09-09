@@ -58,6 +58,18 @@ vyv_doses_mg   = [12.0]                # Vyvanse equivalent d-amphetamine (mg)
 t_ref_dex      = [8.0, 11.0, 13.0]     # Dex top-up times (h of day)
 ref_dex_mg     = [5.0, 5.0, 5.0]       # Dex top-up doses (mg)
 
+# === Styling (align with PK/PD overlay script) ===
+DEX_BASE_COLORS = [
+    "tab:purple", "tab:green", "gold", "tab:red",
+    "tab:brown", "tab:pink", "tab:olive", "tab:cyan",
+    "mediumpurple", "darkseagreen", "lightsalmon"
+]
+COLORS = {
+    "total_pk": "tab:blue",
+    "vyv_pk": "tab:orange",
+    "neutral_marker": "tab:gray",
+}
+
 # === Dynamic 24h window based on earliest dose across all plotted schedules ===
 all_times = []
 all_times += list(t_vyv or [])
@@ -108,13 +120,10 @@ y_top = np.ceil(ymax * 1.08)  # 8% headroom, rounded up
 # === Plot ===
 plt.figure(figsize=(13, 7))
 
-# Choose per-dose colors (also used for stop-after branches)
-colors = ["tab:purple", "tab:green", "gold", "tab:red", "tab:brown", "tab:pink", "tab:olive", "tab:cyan"]
-
 # Projections first (so total overlays overlaps). Color-match by dose index.
 stop_after_lines = []
 for i, included_time, branch_time, curve in stop_after_totals:
-    col = colors[i % len(colors)]
+    col = DEX_BASE_COLORS[i % len(DEX_BASE_COLORS)]
     line, = plt.plot(
         t,
         mask_from(branch_time, curve),
@@ -127,13 +136,14 @@ for i, included_time, branch_time, curve in stop_after_totals:
     stop_after_lines.append(line)
 
 # Reference total (solid)
-total_line, = plt.plot(t, total_ref_plot,  linewidth=2.6, color="tab:blue", label="Total (Vyvanse + Dex)")
+total_line, = plt.plot(t, total_ref_plot,  linewidth=2.6, color=COLORS["total_pk"], label="Total (Vyvanse + Dex)")
 
 # Base components (dashed)
-vyv_line, = plt.plot(t, vyv_curve_ref_plot,  linewidth=2.0, color="orange", label="Vyvanse 30mg → dex (eq. 12mg) [Tmax≈3.5–4h]")
+vyv_line, = plt.plot(t, vyv_curve_ref_plot,  linewidth=2.0, color=COLORS["vyv_pk"], label="Vyvanse 30mg → dex (eq. 12mg) [Tmax≈3.5–4h]")
 labels = [f"Dex IR {dose:g}mg @ {label_hour(td)}" for td, dose in zip(t_ref_dex, ref_dex_mg)]
 dex_lines = []
-for curve, lab, col in zip(ref_dex_curves, labels, colors):
+for i, (curve, lab) in enumerate(zip(ref_dex_curves, labels)):
+    col = DEX_BASE_COLORS[i % len(DEX_BASE_COLORS)]
     line, = plt.plot(t, curve, linestyle="--", linewidth=1.8, color=col, label=f"{lab} ({'perceived' if 'Perceived' in dex_mode_label else 'PK'})")
     dex_lines.append(line)
 

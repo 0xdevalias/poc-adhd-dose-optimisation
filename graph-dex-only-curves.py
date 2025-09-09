@@ -50,6 +50,18 @@ ka_ir          = 1.4               # tuned for Tmax ≈ 1–2 h
 ke_ir          = np.log(2) / 2.7   # effective half-life (t½) ≈ 3–4 h
 dex_mode_label = "Perceived effect — ka=1.40, t1/2=2.7h"
 
+# === Styling (align with PK/PD overlay script) ===
+DEX_BASE_COLORS = [
+    "tab:purple", "tab:green", "gold", "tab:red",
+    "tab:brown", "tab:pink", "tab:olive", "tab:cyan",
+    "mediumpurple", "darkseagreen", "lightsalmon"
+]
+COLORS = {
+    "total_pk": "tab:blue",
+    "vyv_pk": "tab:orange",
+    "neutral_marker": "tab:gray",
+}
+
 # === Reference scenario: Vyvanse + Dex ===
 # Use the same 'times' + 'doses' pattern for Vyvanse and Dex add-ons
 t_vyv          = [8.0]                 # Vyvanse dose time(s) (h of day)
@@ -106,13 +118,14 @@ y_top = np.ceil(ymax * 1.08)  # 8% headroom, rounded up
 plt.figure(figsize=(13, 7))
 
 # Reference total (dotted)
-ref_total_line, = plt.plot(t, total_ref_plot, linewidth=2.4, linestyle=":", label="Total (Vyvanse + Dex reference)")
+ref_total_line, = plt.plot(t, total_ref_plot, linewidth=2.4, linestyle=":", color=COLORS["total_pk"], label="Total (Vyvanse + Dex reference)")
 
 # Dex-only components (dashed)
 labels = [f"Dex-only {dose:g}mg @ {label_hour(td)}" for td, dose in zip(t_dex, dex_mg)]
 dex_lines = []
-for curve, lab in zip(dex_curves, labels):
-    line, = plt.plot(t, curve, linestyle="--", linewidth=1.6, label=lab)
+for i, (curve, lab) in enumerate(zip(dex_curves, labels)):
+    col = DEX_BASE_COLORS[i % len(DEX_BASE_COLORS)]
+    line, = plt.plot(t, curve, linestyle="--", linewidth=1.6, color=col, label=lab)
     dex_lines.append(line)
 
 # Stop-after projections (dotted, behind totals) — one per Dex dose except last
@@ -137,7 +150,7 @@ for i in range(max(0, len(dex_curves) - 1)):
     stop_after_lines.append(line)
 
 # Dex-only total (solid)
-dex_total_line, = plt.plot(t, total_dex_only_plot, linewidth=2.8, linestyle="-", label="Total (Dex-only model)")
+dex_total_line, = plt.plot(t, total_dex_only_plot, linewidth=2.8, linestyle="-", color=COLORS["total_pk"], label="Total (Dex-only model)")
 
 # Dose markers for Dex-only (match line colors)
 for td, line in zip(t_dex, dex_lines):
