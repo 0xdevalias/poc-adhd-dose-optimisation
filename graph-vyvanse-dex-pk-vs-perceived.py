@@ -57,7 +57,7 @@ def label_hour(h):
 RES_MIN = 1  # minutes per sample
 KA_VYV, KA_DEX = 0.80, 1.00
 KE_AMP = np.log(2) / 11.0
-DEFAULT_SVG = "graph-vyvanse-dex-pk-vs-perceived.svg"
+DEFAULT_OUTPUT = "graph-vyvanse-dex-pk-vs-perceived.svg"
 
 # Vyvanse capsule → dex equivalent helper
 #
@@ -298,13 +298,13 @@ def plot_overlay(t, vyv_sum, vyv_pk_curves, dex_pk_curves, total_pk, PD, t_start
     return fig
 
 # === Entrypoint ===
-def run(save_svg=None):
+def run(save_fig=None):
     t_start, t_end = compute_time_window(VYVANSE, DEX)
     t = np.linspace(t_start, t_end, int((t_end - t_start) * 60 / RES_MIN) + 1)
     vyv_sum, vyv_pk_curves, dex_pk_curves, total_pk = build_pk(t)
     fig = plot_overlay(t, vyv_sum, vyv_pk_curves, dex_pk_curves, total_pk, default_PD, t_start, t_end)
-    if save_svg:
-        path = save_svg if save_svg != "default" else DEFAULT_SVG
+    if save_fig:
+        path = save_fig if save_fig != "default" else DEFAULT_OUTPUT
         save_figure_safely(fig, path)
     try:
         plt.show()
@@ -315,8 +315,8 @@ def run(save_svg=None):
 if __name__ == "__main__":
     p = argparse.ArgumentParser()
     p.add_argument(
-        '--save-svg', nargs='?', const='default',
-        help=f'Optionally save an SVG; omit path to use default: {DEFAULT_SVG}'
+        '--save-fig', nargs='?', const='default',
+        help=f'Optionally save the chart to a file (format inferred from extension); omit path to use default: {DEFAULT_OUTPUT}'
     )
     args = p.parse_args()
-    run(save_svg=args.save_svg)
+    run(save_fig=args.save_fig)

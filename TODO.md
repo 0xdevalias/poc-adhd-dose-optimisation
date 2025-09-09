@@ -12,7 +12,7 @@
   - Add CLI args
 - CLI polish for `graph-vyvanse-dex-pk-vs-perceived.py`
   - Add flags (with sensible defaults and validation):
-    - `--save-svg [PATH]`: save SVG to PATH; if omitted, use script default filename constant.
+    - `--save-fig [PATH]`: save figure to PATH (format inferred by extension); if omitted, use script default filename.
     - `--dex-tau-r FLOAT` (default 0.5): Dex perceived rise time constant (hours). Typical range 0.3–0.7.
     - `--dex-tau-d FLOAT` (default 3.0): Dex perceived decay time constant (hours). Typical range 2.6–3.4.
     - `--pd-peak-scale FLOAT` (default 1.0): target PD peak as a multiple of PK peak (e.g., 1.0 → match PK peak).
@@ -25,9 +25,9 @@
     - CLI overrides the in‑file defaults when flags are provided; otherwise keep current hardcoded defaults.
     - Validate and print concise errors for invalid values (e.g., non‑numeric, negative, mismatched pairs).
   - Examples to test (for README):
-    - `python graph-vyvanse-dex-pk-vs-perceived.py --save-svg`
+    - `python graph-vyvanse-dex-pk-vs-perceived.py --save-fig`
     - `python graph-vyvanse-dex-pk-vs-perceived.py --dex-tau-r 0.35 --dex-tau-d 3.2 --pd-peak-scale 1.0 --pd-max-scale 1.0`
-    - `python graph-vyvanse-dex-pk-vs-perceived.py --vyv-capsule 40 --dex "8=5,12=5" --save-svg charts/pk-vs-perceived.svg`
+    - `python graph-vyvanse-dex-pk-vs-perceived.py --vyv-capsule 40 --dex "8=5,12=5" --save-fig charts/pk-vs-perceived.svg`
 - README / docs updates
   - Add a short “How to tune perceived” section covering:
     - `τr` (rise): smaller → faster onset and earlier peak; typical 0.3–0.7 h for Dex IR.
@@ -41,7 +41,7 @@
 
 - Output filename templating
   - Add an optional filename template mode for SVG exports without replacing the current default filenames.
-  - Allow a template via a new flag (e.g., `--filename-template` or `--save-svg-template`) that can be used alongside `--save-svg`.
+  - Allow a template via a new flag (e.g., `--filename-template` or `--save-fig-template`) that can be used alongside `--save-fig`.
   - Support tokens (expanded at runtime):
     - `{date}`: local date in `YYYY-MM-DD`.
     - `{sched}`: Dex schedule string like `5mg@9.25+5mg@11+5mg@12.75` (sorted by time).
@@ -60,7 +60,7 @@
       - → `2025-09-07-vyv30mg-5mg@9.25+5mg@11-dex-only-curves.svg`
   - Nice-to-have:
     - `--filename-mode schedule-date` as shorthand for `{date}-{sched}-{graph}.svg`.
-    - Environment default via `PK_FILENAME_TEMPLATE` when `--save-svg` is provided without an explicit path.
+    - Environment default via `PK_FILENAME_TEMPLATE` when `--save-fig` is provided without an explicit path.
 
 - Redose suggestion (Dex IR)
   - Goal: suggest a practical redose window based on the current total perceived curve to maintain a stable plateau while avoiding peak stacking and late‑day tail.

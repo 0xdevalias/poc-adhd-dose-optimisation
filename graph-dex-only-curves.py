@@ -172,17 +172,22 @@ handles = [ref_total_line, dex_total_line] + dex_lines + stop_after_lines
 plt.legend(handles=handles, labels=[h.get_label() for h in handles], ncol=2, fontsize=9)
 plt.tight_layout()
 
-# Optional: save an SVG of the chart
+# Optional: save the chart to a file (format inferred from extension)
 parser = argparse.ArgumentParser(add_help=False)
-parser.add_argument("--save-svg", nargs="?", const="default", metavar="PATH",
-                    help="Optionally save the chart as an SVG. Provide a path or omit for a default filename.")
+parser.add_argument(
+    "--save-fig",
+    nargs="?",
+    const="default",
+    metavar="PATH",
+    help="Optionally save the chart to a file. Provide a path or omit for a default filename."
+)
 try:
     args, _ = parser.parse_known_args()
-    svg_path = None
-    if getattr(args, "save_svg", None) is not None:
-        svg_path = args.save_svg if args.save_svg != "default" else "graph-dex-only-curves.svg"
-    if svg_path:
-        save_figure_safely(fig, svg_path)
+    save_path = None
+    if getattr(args, "save_fig", None) is not None:
+        save_path = args.save_fig if args.save_fig != "default" else "graph-dex-only-curves.svg"
+    if save_path:
+        save_figure_safely(fig, save_path)
 except SystemExit:
     pass  # ignore argparse errors in interactive contexts
 

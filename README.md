@@ -130,18 +130,18 @@ python graph-dex-only-curves.py
 python graph-vyvanse-dex-pk-vs-perceived.py
 ```
 
-Optional: save an SVG of the chart (lightweight, good for git):
+Optional: save the chart to a file (format inferred by extension):
 
 ```sh
 # default filenames in repo root
-python graph-vyvanse-with-dex-curves.py --save-svg
-python graph-dex-only-curves.py --save-svg
-python graph-vyvanse-dex-pk-vs-perceived.py --save-svg
+python graph-vyvanse-with-dex-curves.py --save-fig
+python graph-dex-only-curves.py --save-fig
+python graph-vyvanse-dex-pk-vs-perceived.py --save-fig
 
 # or provide a custom path
-python graph-vyvanse-with-dex-curves.py --save-svg charts/vyv-dex.svg
-python graph-dex-only-curves.py --save-svg charts/dex-only.svg
-python graph-vyvanse-dex-pk-vs-perceived.py --save-svg charts/pk-vs-perceived.svg
+python graph-vyvanse-with-dex-curves.py --save-fig charts/vyv-dex.svg
+python graph-dex-only-curves.py --save-fig charts/dex-only.svg
+python graph-vyvanse-dex-pk-vs-perceived.py --save-fig charts/pk-vs-perceived.svg
 ```
 
 Each script opens a Matplotlib window and prints values at key target times in the terminal.
