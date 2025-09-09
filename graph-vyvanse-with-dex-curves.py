@@ -180,7 +180,11 @@ try:
 except SystemExit:
     pass  # ignore argparse errors in interactive contexts
 
-plt.show()
+try:
+    plt.show()
+except KeyboardInterrupt:
+    plt.close('all')
+    raise SystemExit(0)
 
 # === Values at key targets for Vyvanse+Dex ===
 def value_at_hour(hour, curve):

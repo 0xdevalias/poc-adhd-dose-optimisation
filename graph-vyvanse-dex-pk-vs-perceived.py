@@ -288,7 +288,11 @@ def run(save_svg=None):
     if save_svg:
         path = save_svg if save_svg != "default" else DEFAULT_SVG
         fig.savefig(path, format="svg", bbox_inches="tight")
-    plt.show()
+    try:
+        plt.show()
+    except KeyboardInterrupt:
+        plt.close('all')
+        raise SystemExit(0)
 
 if __name__ == "__main__":
     p = argparse.ArgumentParser()
