@@ -176,11 +176,30 @@ def plot_overlay(t, vyv_sum, vyv_pk_curves, dex_pk_curves, total_pk, PD, t_start
     fig, ax = plt.subplots(figsize=(13, 7))
     # Colors come from centralized DEX_BASE_COLORS / COLORS
 
+    # Helper to mask pre-dose zero baselines for clarity
+    def mask_before(time0, curve):
+        if time0 is None:
+            return curve
+        m = curve.copy()
+        m[t < time0] = np.nan
+        return m
+
+    # Find the earliest dose time across Vyvanse and Dex
+    all_times = [td for td, _ in (VYVANSE or [])] + [td for td, _ in (DEX or [])]
+    first_time = min(all_times) if all_times else None
+
     # PK curves (solid)
-    total_pk_line, = ax.plot(t, total_pk, linewidth=2.6, color=COLORS['total_pk'], label="Total (PK)")
+    total_pk_plot = mask_before(first_time, total_pk)
+    total_pk_line, = ax.plot(t, total_pk_plot, linewidth=2.6, color=COLORS['total_pk'], label="Total (PK)")
     total_pk_color = total_pk_line.get_color()
-    vyv_pk_line, = ax.plot(t, vyv_sum, linewidth=2.0, color=COLORS['vyv_pk'], label="Vyvanse (PK)")
-    vyv_pk_color = vyv_pk_line.get_color()
+    # Only plot Vyvanse PK if scheduled, and hide pre-dose baseline
+    if VYVANSE:
+        vyv_first = min(td for td, _ in VYVANSE)
+        vyv_sum_plot = mask_before(vyv_first, vyv_sum)
+        vyv_pk_line, = ax.plot(t, vyv_sum_plot, linewidth=2.0, color=COLORS['vyv_pk'], label="Vyvanse (PK)")
+        vyv_pk_color = vyv_pk_line.get_color()
+    else:
+        vyv_pk_color = COLORS['vyv_pk']
     # Build effective Dex colors that avoid Total/Vyvanse colors
     reserved = {total_pk_color, vyv_pk_color}
     dex_colors = [c for c in DEX_BASE_COLORS if c not in reserved] or DEX_BASE_COLORS[:]
@@ -213,7 +232,9 @@ def plot_overlay(t, vyv_sum, vyv_pk_curves, dex_pk_curves, total_pk, PD, t_start
     dex_pd_components_m = [mask_below(curve, floor) for curve in dex_pd_components]
 
     # Perceived component curves are plotted fully; no special masking is applied beyond the floor.
-    ax.plot(t, total_pd_m, linewidth=2.6, linestyle=":", color=total_pk_color, alpha=0.9, label="Total (perceived)")
+    # Mask perceived totals before first dose to avoid a zero baseline
+    total_pd_plot = mask_before(first_time, total_pd_m)
+    ax.plot(t, total_pd_plot, linewidth=2.6, linestyle=":", color=total_pk_color, alpha=0.9, label="Total (perceived)")
     ax.plot(t, vyv_pd_m, linewidth=2.0, linestyle=":", color=vyv_pk_color, alpha=0.85, label="Vyvanse (perceived)")
     for i, ((td, d), curve) in enumerate(zip(DEX, dex_pd_components_m)):
         col = dex_pk_colors[i] if i < len(dex_pk_colors) else (dex_colors[i % len(dex_colors)])

@@ -82,6 +82,16 @@ total_ref      = vyv_curve_ref + sum(np.nan_to_num(c) for c in ref_dex_curves)
 dex_curves       = curves_from_schedule(t_dex, dex_mg, ka_ir, ke_ir)
 total_dex_only   = sum(np.nan_to_num(c) for c in dex_curves)
 
+# Mask helper to hide pre-dose zero baselines for plotted totals
+def mask_before(time0, curve):
+    m = curve.copy()
+    m[t < time0] = np.nan
+    return m
+
+first_time = min(all_times) if all_times else None
+total_ref_plot = mask_before(first_time, total_ref) if first_time is not None else total_ref
+total_dex_only_plot = mask_before(first_time, total_dex_only) if first_time is not None else total_dex_only
+
 # === Dynamic y-limit for full visibility with a little headroom ===
 ymax = max(np.max(total_dex_only), np.max(total_ref))
 y_top = np.ceil(ymax * 1.08)  # 8% headroom, rounded up
@@ -90,7 +100,7 @@ y_top = np.ceil(ymax * 1.08)  # 8% headroom, rounded up
 plt.figure(figsize=(13, 7))
 
 # Reference total (dotted)
-plt.plot(t, total_ref, linewidth=2.4, linestyle=":", label="Total (Vyvanse + Dex reference)")
+plt.plot(t, total_ref_plot, linewidth=2.4, linestyle=":", label="Total (Vyvanse + Dex reference)")
 
 # Dex-only components (dashed)
 labels = [f"Dex-only {dose:g}mg @ {label_hour(td)}" for td, dose in zip(t_dex, dex_mg)]
@@ -100,7 +110,7 @@ for curve, lab in zip(dex_curves, labels):
     dex_lines.append(line)
 
 # Dex-only total (solid)
-plt.plot(t, total_dex_only, linewidth=2.8, linestyle="-", label="Total (Dex-only model)")
+plt.plot(t, total_dex_only_plot, linewidth=2.8, linestyle="-", label="Total (Dex-only model)")
 
 # Dose markers for Dex-only (match line colors)
 for td, line in zip(t_dex, dex_lines):

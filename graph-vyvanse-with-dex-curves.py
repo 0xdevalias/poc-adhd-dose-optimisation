@@ -78,6 +78,18 @@ total_ref      = vyv_curve_ref + sum(np.nan_to_num(c) for c in ref_dex_curves)
 total_stop_after_dex1 = vyv_curve_ref + np.nan_to_num(ref_dex_curves[0])
 total_stop_after_dex2 = vyv_curve_ref + np.nan_to_num(ref_dex_curves[0]) + np.nan_to_num(ref_dex_curves[1])
 
+# Mask helper to hide pre-dose zero baselines for plotted totals
+def mask_before(time0, curve):
+    m = curve.copy()
+    m[t < time0] = np.nan
+    return m
+
+first_time = min(all_times) if all_times else None
+total_ref_plot = mask_before(first_time, total_ref) if first_time is not None else total_ref
+total_stop_after_dex1_plot = mask_before(first_time, total_stop_after_dex1) if first_time is not None else total_stop_after_dex1
+total_stop_after_dex2_plot = mask_before(first_time, total_stop_after_dex2) if first_time is not None else total_stop_after_dex2
+vyv_curve_ref_plot = mask_before(min(t_vyv), vyv_curve_ref) if (t_vyv and len(t_vyv) > 0) else vyv_curve_ref
+
 # === Dynamic y-limit for full visibility with a little headroom ===
 ymax = np.max(total_ref)
 y_top = np.ceil(ymax * 1.08)  # 8% headroom, rounded up
@@ -86,14 +98,14 @@ y_top = np.ceil(ymax * 1.08)  # 8% headroom, rounded up
 plt.figure(figsize=(13, 7))
 
 # Projections first (so total overlays overlaps)
-plt.plot(t, total_stop_after_dex1, linestyle=":", linewidth=1.8, color="tab:purple", alpha=0.85, label="Stop after 08:00 Dex")
-plt.plot(t, total_stop_after_dex2, linestyle=":", linewidth=1.8, color="tab:green",  alpha=0.85, label="Stop after 11:00 Dex")
+plt.plot(t, total_stop_after_dex1_plot, linestyle=":", linewidth=1.8, color="tab:purple", alpha=0.85, label="Stop after 08:00 Dex")
+plt.plot(t, total_stop_after_dex2_plot, linestyle=":", linewidth=1.8, color="tab:green",  alpha=0.85, label="Stop after 11:00 Dex")
 
 # Reference total (solid)
-plt.plot(t, total_ref,  linewidth=2.6, color="tab:blue", label="Total (Vyvanse + Dex)")
+plt.plot(t, total_ref_plot,  linewidth=2.6, color="tab:blue", label="Total (Vyvanse + Dex)")
 
 # Base components (dashed)
-plt.plot(t, vyv_curve_ref,  linewidth=2.0, color="orange", label="Vyvanse 30mg → dex (eq. 12mg) [Tmax≈3.5–4h]")
+plt.plot(t, vyv_curve_ref_plot,  linewidth=2.0, color="orange", label="Vyvanse 30mg → dex (eq. 12mg) [Tmax≈3.5–4h]")
 labels = [f"Dex IR {dose:g}mg @ {label_hour(td)}" for td, dose in zip(t_ref_dex, ref_dex_mg)]
 colors = ["tab:purple", "tab:green", "gold"]
 dex_lines = []
