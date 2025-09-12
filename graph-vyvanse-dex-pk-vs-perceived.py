@@ -32,10 +32,6 @@ from utils.pk_models import bateman, caffeine_total_curve, curves_from_schedule
 from utils.plot_utils import label_hour
 from utils.style import DEX_BASE_COLORS, COLORS
 
- 
-
-# === Perceived-effect kernel ===
-
 # === Global defaults ===
 RES_MIN = 1  # minutes per sample
 KA_VYV, KA_DEX = 0.80, 1.00
