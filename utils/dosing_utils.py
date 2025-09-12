@@ -82,3 +82,33 @@ def grams_to_caffeine_mg(grams: float, *, mg_per_gram: float = 12.0) -> float:
       - AeroPress scoop: ≈ 11–14 g whole beans (bean size/roast/grind vary).
     """
     return float(grams) * float(mg_per_gram)
+
+
+# === Vyvanse ↔︎ Dex-equivalent conversions ===
+#
+# Vyvanse capsule → dex equivalent helper
+#
+# | Vyvanse dose | Approx. Dex equivalent |
+# | ------------ | ---------------------- |
+# | 20 mg        | 8 mg                   |
+# | 30 mg        | 12 mg                  |
+# | 40 mg        | 16 mg                  |
+# | 50 mg        | 20 mg                  |
+# | 60 mg        | 24 mg                  |
+# | 70 mg        | 28 mg                  |
+#
+# Based on FDA conversion and pharmacokinetic data: about 1 mg Vyvanse → 0.4 mg dex.
+def vyvanse_cap_to_dex_eq(mg_capsule: float, *, ratio: float = 0.4) -> float:
+    """Approx. convert Vyvanse capsule mg → dex-equivalent mg.
+
+    FDA/common rule of thumb: ~1 mg Vyvanse → 0.4 mg dex (ratio=0.4).
+    """
+    return float(mg_capsule) * float(ratio)
+
+
+def vyvanse_dex_eq_to_capsule_mg(dex_eq_mg: float, *, ratio: float = 0.4) -> float:
+    """Approx. convert dex-equivalent mg → Vyvanse capsule mg.
+
+    Inverse of `vyvanse_cap_to_dex_eq` using the same ratio (default 0.4).
+    """
+    return float(dex_eq_mg) / float(ratio)

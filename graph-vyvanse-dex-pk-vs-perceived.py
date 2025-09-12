@@ -22,7 +22,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 import math
 from utils.save_utils import save_figure_safely
-from utils.dosing_utils import shots_to_caffeine_mg, aeropress_scoops_to_caffeine_mg, grams_to_caffeine_mg
+from utils.dosing_utils import (
+    shots_to_caffeine_mg,
+    aeropress_scoops_to_caffeine_mg,
+    grams_to_caffeine_mg,
+    vyvanse_cap_to_dex_eq,
+)
 from utils.pk_models import bateman, caffeine_total_curve, curves_from_schedule
 from utils.plot_utils import label_hour
 from utils.style import DEX_BASE_COLORS, COLORS
@@ -36,21 +41,6 @@ RES_MIN = 1  # minutes per sample
 KA_VYV, KA_DEX = 0.80, 1.00
 KE_AMP = np.log(2) / 11.0
 DEFAULT_OUTPUT = "graph-vyvanse-dex-pk-vs-perceived.svg"
-
-# Vyvanse capsule → dex equivalent helper
-#
-# | Vyvanse dose | Approx. Dex equivalent |
-# | ------------ | ---------------------- |
-# | 20 mg        | 8 mg                   |
-# | 30 mg        | 12 mg                  |
-# | 40 mg        | 16 mg                  |
-# | 50 mg        | 20 mg                  |
-# | 60 mg        | 24 mg                  |
-# | 70 mg        | 28 mg                  |
-#
-# Based on FDA conversion and pharmacokinetic data: about 1 mg Vyvanse → 0.4 mg dex.
-def vyvanse_cap_to_dex_eq(mg_capsule: float) -> float:
-    return float(mg_capsule) * 0.4
 
 # Example dosing schedule 
 VYVANSE = [(8.0, vyvanse_cap_to_dex_eq(30.0))]

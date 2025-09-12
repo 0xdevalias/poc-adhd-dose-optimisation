@@ -8,6 +8,7 @@ from utils.save_utils import save_figure_safely
 from utils.pk_models import bateman, curves_from_schedule
 from utils.plot_utils import label_hour
 from utils.style import DEX_BASE_COLORS, COLORS
+from utils.dosing_utils import vyvanse_cap_to_dex_eq, vyvanse_dex_eq_to_capsule_mg
 
 def _build_schedule(times, doses):
     return list(zip(times, doses))
@@ -31,8 +32,8 @@ dex_mode_label = "Perceived effect — ka=1.40, t1/2=2.7h"
 
 # === Reference scenario: Vyvanse + Dex ===
 # Use the same 'times' + 'doses' pattern for Vyvanse and Dex add-ons
-t_vyv          = [8.0]                 # Vyvanse dose time(s) (h of day)
-vyv_doses_mg   = [12.0]                # Vyvanse equivalent d-amphetamine (mg)
+t_vyv          = [8.0]                          # Vyvanse dose time(s) (h of day)
+vyv_doses_mg   = [vyvanse_cap_to_dex_eq(30.0)]  # Vyvanse equivalent d-amphetamine (mg)
 
 t_ref_dex      = [8.0, 11.0, 13.0]     # Dex top-up times (h of day)
 ref_dex_mg     = [5.0, 5.0, 5.0]       # Dex top-up doses (mg)
