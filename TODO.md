@@ -4,7 +4,7 @@
   - As part of this, it might be useful to look at the changes already made in `graph-vyvanse-dex-pk-vs-perceived.py`; it has some cleaner patterns for some parts
   - Targets: `graph-dex-only-curves.py`, `graph-vyvanse-with-dex-curves.py`
   - Extract common helpers into a small module (e.g. `pk_plot_utils.py`):
-    - `bateman`, `label_hour`, `curves_from_schedule`
+    - `bateman`, `format_time_12h`, `curves_from_schedule`
     - Shared plotting style (grid, legends, dose marker styling)
   - Centralize pharmacokinetic config (Vyvanse + Dex) and `dex_mode_label` lines
     - Keep the simple toggle-by-comment pattern intact

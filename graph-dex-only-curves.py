@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import math
 from utils.save_utils import save_figure_safely
 from utils.pk_models import bateman, curves_from_schedule
-from utils.plot_utils import label_hour
+from utils.plot_utils import format_time_12h
 from utils.style import DEX_BASE_COLORS, COLORS
 from utils.dosing_utils import vyvanse_cap_to_dex_eq
 from utils.filename_utils import build_schedule_filename
@@ -93,7 +93,7 @@ fig, ax = plt.subplots(figsize=(13, 7))
 ref_total_line, = ax.plot(t, total_ref_plot, linewidth=2.4, linestyle=":", color=COLORS["total_pk"], label="Total (Vyvanse + Dex reference)")
 
 # Dex-only components (dashed)
-labels = [f"Dex-only {dose:g}mg @ {label_hour(td)}" for td, dose in zip(t_dex, dex_mg)]
+labels = [f"Dex-only {dose:g}mg @ {format_time_12h(td)}" for td, dose in zip(t_dex, dex_mg)]
 dex_lines = []
 for i, (curve, lab) in enumerate(zip(dex_curves, labels)):
     col = DEX_BASE_COLORS[i % len(DEX_BASE_COLORS)]
@@ -117,7 +117,7 @@ for i in range(max(0, len(dex_curves) - 1)):
         linewidth=1.4,
         alpha=0.85,
         color=color,
-        label=f"Stop after {label_hour(included_time)} Dex"
+        label=f"Stop after {format_time_12h(included_time)} Dex"
     )
     stop_after_lines.append(line)
 
@@ -135,7 +135,7 @@ for td, line in zip(t_dex, dex_lines):
 # Hourly grid & ticks (start → start next day)
 xticks = list(range(int(start_h), int(end_h) + 1, 1))
 ax.set_xticks(xticks)
-ax.set_xticklabels([label_hour(h) for h in xticks], rotation=0)
+ax.set_xticklabels([format_time_12h(h) for h in xticks], rotation=0)
 ax.grid(True, which="both", axis="both", alpha=0.33, linestyle="--", linewidth=0.7)
 
 ax.set_title(f"Dex-only Model vs Vyvanse+Dex Reference\nDex IR: {dex_mode_label}")

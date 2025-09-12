@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import math
 from utils.save_utils import save_figure_safely
 from utils.pk_models import bateman, curves_from_schedule
-from utils.plot_utils import label_hour
+from utils.plot_utils import format_time_12h
 from utils.style import DEX_BASE_COLORS, COLORS
 from utils.dosing_utils import vyvanse_cap_to_dex_eq, vyvanse_dex_eq_to_capsule_mg
 from utils.filename_utils import build_schedule_filename
@@ -106,7 +106,7 @@ for i, included_time, branch_time, curve in stop_after_totals:
         linewidth=1.6,
         color=col,
         alpha=0.85,
-        label=f"Stop after {label_hour(included_time)} Dex"
+        label=f"Stop after {format_time_12h(included_time)} Dex"
     )
     stop_after_lines.append(line)
 
@@ -127,7 +127,7 @@ if t_vyv and len(t_vyv) > 0:
         color=COLORS["vyv_pk"],
         label=vyv_label,
     )
-labels = [f"Dex IR {dose:g}mg @ {label_hour(td)}" for td, dose in zip(t_ref_dex, ref_dex_mg)]
+labels = [f"Dex IR {dose:g}mg @ {format_time_12h(td)}" for td, dose in zip(t_ref_dex, ref_dex_mg)]
 dex_lines = []
 for i, (curve, lab) in enumerate(zip(ref_dex_curves, labels)):
     col = DEX_BASE_COLORS[i % len(DEX_BASE_COLORS)]
@@ -145,7 +145,7 @@ for td, line in zip(t_ref_dex, dex_lines):
 # Hourly grid & ticks (start → start next day)
 xticks = list(range(int(start_h), int(end_h) + 1, 1))
 ax.set_xticks(xticks)
-ax.set_xticklabels([label_hour(h) for h in xticks], rotation=0)
+ax.set_xticklabels([format_time_12h(h) for h in xticks], rotation=0)
 ax.grid(True, which="both", axis="both", alpha=0.33, linestyle="--", linewidth=0.7)
 
 ax.set_title(f"Vyvanse + Dex Model\nDex IR: {dex_mode_label}")

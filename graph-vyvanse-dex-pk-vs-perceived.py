@@ -29,7 +29,7 @@ from utils.dosing_utils import (
     vyvanse_cap_to_dex_eq,
 )
 from utils.pk_models import bateman, caffeine_total_curve, curves_from_schedule
-from utils.plot_utils import label_hour
+from utils.plot_utils import format_time_12h
 from utils.style import DEX_BASE_COLORS, COLORS
 from utils.filename_utils import build_schedule_filename
 
@@ -191,7 +191,7 @@ def plot_overlay(t, vyv_sum, vyv_pk_curves, dex_pk_curves, total_pk, PD, t_start
     dex_pk_colors, dex_pk_lines = [], []
     for i, ((td, d), curve) in enumerate(zip(DEX, dex_pk_curves)):
         col = dex_colors[i % len(dex_colors)]
-        pk_line, = ax.plot(t, curve, linestyle="--", linewidth=1.5, color=col, label=f"Dex {d}mg @ {label_hour(td)} (PK)")
+        pk_line, = ax.plot(t, curve, linestyle="--", linewidth=1.5, color=col, label=f"Dex {d}mg @ {format_time_12h(td)} (PK)")
         dex_pk_lines.append(pk_line)
         dex_pk_colors.append(pk_line.get_color())
 
@@ -227,7 +227,7 @@ def plot_overlay(t, vyv_sum, vyv_pk_curves, dex_pk_curves, total_pk, PD, t_start
     dex_pd_lines = []
     for i, ((td, d), curve) in enumerate(zip(DEX, dex_pd_components_m)):
         col = dex_pk_colors[i] if i < len(dex_pk_colors) else (dex_colors[i % len(dex_colors)])
-        pd_line, = ax.plot(t, curve, linestyle=":", linewidth=1.5, alpha=0.8, color=col, label=f"Dex {d}mg @ {label_hour(td)} (perceived)")
+        pd_line, = ax.plot(t, curve, linestyle=":", linewidth=1.5, alpha=0.8, color=col, label=f"Dex {d}mg @ {format_time_12h(td)} (perceived)")
         dex_pd_lines.append(pd_line)
 
     # Stop-after projections
@@ -288,7 +288,7 @@ def plot_overlay(t, vyv_sum, vyv_pk_curves, dex_pk_curves, total_pk, PD, t_start
 
     # Axes/labels
     ax.set_xticks(range(int(t_start), int(t_end) + 1))
-    ax.set_xticklabels([label_hour(h) for h in range(int(t_start), int(t_end) + 1)])
+    ax.set_xticklabels([format_time_12h(h) for h in range(int(t_start), int(t_end) + 1)])
     ax.grid(True, alpha=0.3, linestyle="--")
     ax.set_title(
         f"Vyvanse + Dex — PK (solid) vs perceived (dotted) | τr={PD.get('dex_tau_r',0.5)}h, τd={PD.get('dex_tau_d',3.0)}h, peak≈{PD.get('pd_peak_scale',1.0)}×PK, clamp≤{PD.get('pd_max_scale',1.1)}×PK"
