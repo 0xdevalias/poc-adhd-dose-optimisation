@@ -19,6 +19,9 @@ def _build_schedule(times, doses):
 # Vyvanse (LDX (lisdexamfetamine) → d-amphetamine) — reference
 ka_vyv         = 0.80              # tuned for Tmax ≈ 3.5–4 h
 ke_vyv         = np.log(2) / 11.0  # plasma half-life (t½) ≈ 10–12 h
+## Derive a simple Tmax label from ka/ke so labels stay in sync
+vyv_tmax_h     = float(np.log(ka_vyv / ke_vyv) / (ka_vyv - ke_vyv)) if ka_vyv != ke_vyv else 1.0 / ka_vyv
+vyv_tmax_label = f"Tmax≈{vyv_tmax_h:.1f}h"
 
 # # Dex IR (actual PK; slower absorption / longer plasma half-life)
 # ka_ir          = 1.0               # tuned for Tmax ≈ 2.5–3.5 h
@@ -109,7 +112,17 @@ total_line, = ax.plot(t, total_ref_plot,  linewidth=2.6, color=COLORS["total_pk"
 # Base components (dashed)
 vyv_line = None
 if t_vyv and len(t_vyv) > 0:
-    vyv_line, = ax.plot(t, vyv_curve_ref_plot,  linewidth=2.0, color=COLORS["vyv_pk"], label="Vyvanse 30mg → dex (eq. 12mg) [Tmax≈3.5–4h]")
+    vyv_capsules = [vyvanse_dex_eq_to_capsule_mg(m) for m in vyv_doses_mg]
+    total_caps = sum(vyv_capsules)
+    total_dex_eq = sum(vyv_doses_mg)
+    vyv_label = f"Vyvanse {total_caps:g}mg → dex (eq. {total_dex_eq:g}mg) [{vyv_tmax_label}]"
+    vyv_line, = ax.plot(
+        t,
+        vyv_curve_ref_plot,
+        linewidth=2.0,
+        color=COLORS["vyv_pk"],
+        label=vyv_label,
+    )
 labels = [f"Dex IR {dose:g}mg @ {label_hour(td)}" for td, dose in zip(t_ref_dex, ref_dex_mg)]
 dex_lines = []
 for i, (curve, lab) in enumerate(zip(ref_dex_curves, labels)):
