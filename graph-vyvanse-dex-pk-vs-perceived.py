@@ -39,8 +39,12 @@ KA_VYV, KA_DEX = 0.80, 1.00
 KE_AMP = np.log(2) / 11.0
 # DEFAULT_OUTPUT = "graph-vyvanse-dex-pk-vs-perceived.svg"
 _DATE_STR = None
+VYVANSE = []
+DEX = []
+CAFFEINE = []
 
-# Example dosing schedule 
+# Example dosing schedule
+
 VYVANSE = [(8.0, vyvanse_cap_to_dex_eq(30.0))]
 DEX = [(8.0, 5.0), (11.0, 5.0), (13.0, 5.0)]  # Dex 5mg at 8am, 11am, 1pm
 
@@ -57,7 +61,6 @@ DEX = [(8.0, 5.0), (11.0, 5.0), (13.0, 5.0)]  # Dex 5mg at 8am, 11am, 1pm
 #
 # Example: AeroPress with 1 scoops at 1pm in 60 minutes split into 4 parts
 # CAFFEINE = [(13.0, aeropress_scoops_to_caffeine_mg(1.0), 60, 4)]
-CAFFEINE = [(13.0, aeropress_scoops_to_caffeine_mg(1.0), 60)]
 
 # Auto-generate DEFAULT_OUTPUT from schedule
 DEFAULT_OUTPUT = build_schedule_filename(
