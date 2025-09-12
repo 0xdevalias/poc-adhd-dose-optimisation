@@ -9,6 +9,7 @@ from utils.pk_models import bateman, curves_from_schedule
 from utils.plot_utils import label_hour
 from utils.style import DEX_BASE_COLORS, COLORS
 from utils.dosing_utils import vyvanse_cap_to_dex_eq, vyvanse_dex_eq_to_capsule_mg
+from utils.filename_utils import build_schedule_filename
 
 def _build_schedule(times, doses):
     return list(zip(times, doses))
@@ -32,6 +33,9 @@ vyv_tmax_label = f"Tmax≈{vyv_tmax_h:.1f}h"
 ka_ir          = 1.4               # tuned for Tmax ≈ 1–2 h
 ke_ir          = np.log(2) / 2.7   # effective half-life (t½) ≈ 3–4 h
 dex_mode_label = "Perceived effect — ka=1.40, t1/2=2.7h"
+
+# Output filename handling
+DEFAULT_OUTPUT = "auto"  # sentinel; auto-generate from schedule unless overridden
 
 # === Reference scenario: Vyvanse + Dex ===
 # Use the same 'times' + 'doses' pattern for Vyvanse and Dex add-ons
@@ -157,6 +161,15 @@ handles += dex_lines + stop_after_lines
 ax.legend(handles=handles, labels=[h.get_label() for h in handles], ncol=2, fontsize=9)
 fig.tight_layout()
 
+# Auto-generate DEFAULT_OUTPUT from schedule only if left as the 'auto' sentinel
+if isinstance(DEFAULT_OUTPUT, str) and DEFAULT_OUTPUT == "auto":
+    DEFAULT_OUTPUT = build_schedule_filename(
+        'vyvanse-with-dex-curves',
+        vyvanse=_build_schedule(t_vyv, vyv_doses_mg),
+        dex=_build_schedule(t_ref_dex, ref_dex_mg),
+        ext="svg",
+    )
+
 # Optional: save the chart to a file (format inferred from extension)
 parser = argparse.ArgumentParser(add_help=False)
 parser.add_argument(
@@ -170,7 +183,7 @@ try:
     args, _ = parser.parse_known_args()
     save_path = None
     if getattr(args, "save_fig", None) is not None:
-        save_path = args.save_fig if args.save_fig != "default" else "graph-vyvanse-with-dex-curves.svg"
+        save_path = args.save_fig if args.save_fig != "default" else DEFAULT_OUTPUT
     if save_path:
         save_figure_safely(fig, save_path)
 except SystemExit:

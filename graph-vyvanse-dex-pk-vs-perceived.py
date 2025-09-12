@@ -37,7 +37,7 @@ from utils.filename_utils import build_schedule_filename
 RES_MIN = 1  # minutes per sample
 KA_VYV, KA_DEX = 0.80, 1.00
 KE_AMP = np.log(2) / 11.0
-# DEFAULT_OUTPUT = "graph-vyvanse-dex-pk-vs-perceived.svg"
+DEFAULT_OUTPUT = "auto"  # auto-generate filename unless overridden
 _DATE_STR = None
 VYVANSE = []
 DEX = []
@@ -62,14 +62,15 @@ DEX = [(8.0, 5.0), (11.0, 5.0), (13.0, 5.0)]  # Dex 5mg at 8am, 11am, 1pm
 # Example: AeroPress with 1 scoops at 1pm in 60 minutes split into 4 parts
 # CAFFEINE = [(13.0, aeropress_scoops_to_caffeine_mg(1.0), 60, 4)]
 
-# Auto-generate DEFAULT_OUTPUT from schedule
-DEFAULT_OUTPUT = build_schedule_filename(
-    'pk-vs-perceived',
-    date_str=_DATE_STR,
-    vyvanse=VYVANSE,
-    dex=DEX,
-    ext="svg",
-)
+# Auto-generate DEFAULT_OUTPUT from schedule only if left as the 'auto' sentinel
+if isinstance(DEFAULT_OUTPUT, str) and DEFAULT_OUTPUT == "auto":
+    DEFAULT_OUTPUT = build_schedule_filename(
+        'pk-vs-perceived',
+        date_str=_DATE_STR,
+        vyvanse=VYVANSE,
+        dex=DEX,
+        ext="svg",
+    )
 
 # === Time window helpers ===
 def compute_time_window(vyv_schedule, dex_schedule, caffeine_schedule=None, default_start=8.0):
